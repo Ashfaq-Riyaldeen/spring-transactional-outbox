@@ -19,10 +19,17 @@ spring:
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      # publishes failed records to the dead letter topic as they were read
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
 
 app:
   kafka:
     order-events-topic: ${ORDER_EVENTS_TOPIC:order-events}
+    retries: 3
+    retry-interval: 1s
 
 oncebox:
   # inbox cleanup only
