@@ -34,6 +34,13 @@ public class OrderService {
         return OrderResponse.from(order);
     }
 
+    @Transactional(readOnly = true)
+    public OrderResponse get(long id) {
+        return repository.findById(id)
+                .map(OrderResponse::from)
+                .orElseThrow(() -> new OrderNotFoundException(id));
+    }
+
     // The database keeps microseconds; a finer instant would not read back equal to what was returned.
     private Instant now() {
         return clock.instant().truncatedTo(ChronoUnit.MICROS);

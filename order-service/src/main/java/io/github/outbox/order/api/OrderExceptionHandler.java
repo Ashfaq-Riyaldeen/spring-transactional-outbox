@@ -1,6 +1,7 @@
 package io.github.outbox.order.api;
 
 import io.github.outbox.order.api.OrderProblems.FieldViolation;
+import io.github.outbox.order.domain.OrderNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,15 @@ import java.util.List;
 public class OrderExceptionHandler extends ResponseEntityExceptionHandler {
 
     private final Clock clock;
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleOrderNotFoundException(OrderNotFoundException exception,
+                                                                      HttpServletRequest request) {
+        log.debug("Request {} answered 404: {}", request.getRequestURI(), exception.getMessage());
+        ProblemDetail problem = OrderProblems.orderNotFound(exception.getMessage(), request.getRequestURI(),
+                clock.instant());
+        return ResponseEntity.status(problem.getStatus()).body(problem);
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleException(Exception exception, HttpServletRequest request) {

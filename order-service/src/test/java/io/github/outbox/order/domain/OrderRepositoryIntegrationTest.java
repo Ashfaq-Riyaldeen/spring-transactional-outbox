@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -82,6 +83,33 @@ class OrderRepositoryIntegrationTest {
         assertThat(second.id()).isNotEqualTo(first.id());
         assertThat(storedItems(first.id())).hasSize(1);
         assertThat(storedItems(second.id())).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("IT findById() when the order exists should read it back with its items and no cancellation time")
+    void findById_whenOrderExists_shouldReadItBackWithItsItemsAndNoCancellationTime() {
+        // given
+        List<OrderItem> items = List.of(
+                new OrderItem("sku-1", 2, new BigDecimal("10.50")),
+                new OrderItem("sku-2", 1, new BigDecimal("3.00"))
+        );
+        Order saved = tested.save(42L, items, new BigDecimal("24.00"), CREATED_AT);
+
+        // when
+        Optional<Order> found = tested.findById(saved.id());
+
+        // then
+        assertThat(found).contains(saved);
+    }
+
+    @Test
+    @DisplayName("IT findById() when the order does not exist should return empty")
+    void findById_whenOrderDoesNotExist_shouldReturnEmpty() {
+        // when
+        Optional<Order> found = tested.findById(999L);
+
+        // then
+        assertThat(found).isEmpty();
     }
 
     private List<OrderItem> storedItems(long orderId) {

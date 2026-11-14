@@ -16,8 +16,10 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -87,6 +89,33 @@ class OrderServiceUnitTest {
         assertThat(response.createdAt()).isEqualTo(NOW_IN_MICROS);
         assertThat(response.cancelledAt()).isNull();
         assertThat(response.items()).containsExactly(new OrderItemResponse("sku-1", 2, new BigDecimal("10.50")));
+    }
+
+    @Test
+    @DisplayName("UT get() when the order exists should return it")
+    void get_whenOrderExists_shouldReturnIt() {
+        // given
+        Order order = new Order(7L, 42L, OrderStatus.CREATED, BigDecimal.ONE, NOW_IN_MICROS, null,
+                List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)));
+        when(repository.findById(7L)).thenReturn(Optional.of(order));
+
+        // when
+        OrderResponse response = tested.get(7L);
+
+        // then
+        assertThat(response).isEqualTo(OrderResponse.from(order));
+    }
+
+    @Test
+    @DisplayName("UT get() when the order does not exist should throw OrderNotFoundException")
+    void get_whenOrderDoesNotExist_shouldThrowOrderNotFoundException() {
+        // given
+        when(repository.findById(7L)).thenReturn(Optional.empty());
+
+        // when / then
+        assertThatThrownBy(() -> tested.get(7L))
+                .isInstanceOf(OrderNotFoundException.class)
+                .hasMessage("Order 7 not found");
     }
 
     private void givenRepositoryStoresUnderId(long id) {

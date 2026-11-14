@@ -24,6 +24,11 @@ final class OrderProblems {
         return problem;
     }
 
+    static ProblemDetail orderNotFound(String detail, String instance, Instant timestamp) {
+        return problem(HttpStatus.NOT_FOUND, ProblemTypes.ORDER_NOT_FOUND, "Order not found", detail, instance,
+                timestamp);
+    }
+
     static ProblemDetail internalError(String instance, Instant timestamp) {
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, ProblemTypes.INTERNAL_ERROR, "Internal error",
                 INTERNAL_ERROR_DETAIL, instance, timestamp);

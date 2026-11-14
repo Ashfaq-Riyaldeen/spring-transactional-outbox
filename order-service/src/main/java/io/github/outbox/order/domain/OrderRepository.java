@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -49,5 +50,41 @@ public class OrderRepository {
                     .update();
         }
         return new Order(id, customerId, OrderStatus.CREATED, total, createdAt, null, items);
+    }
+
+    public Optional<Order> findById(long id) {
+        List<OrderItem> items = jdbc.sql("""
+                        SELECT product_id, quantity, price
+                        FROM order_items
+                        WHERE order_id = :orderId
+                        ORDER BY id
+                        """)
+                .param("orderId", id)
+                .query((rs, rowNum) -> new OrderItem(
+                        rs.getString("product_id"),
+                        rs.getInt("quantity"),
+                        rs.getBigDecimal("price")
+                ))
+                .list();
+        return jdbc.sql("""
+                        SELECT id, customer_id, status, total, created_at, cancelled_at
+                        FROM orders
+                        WHERE id = :id
+                        """)
+                .param("id", id)
+                .query((rs, rowNum) -> new Order(
+                        rs.getLong("id"),
+                        rs.getLong("customer_id"),
+                        OrderStatus.valueOf(rs.getString("status")),
+                        rs.getBigDecimal("total"),
+                        rs.getTimestamp("created_at").toInstant(),
+                        toInstant(rs.getTimestamp("cancelled_at")),
+                        items
+                ))
+                .optional();
+    }
+
+    private static Instant toInstant(Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toInstant();
     }
 }

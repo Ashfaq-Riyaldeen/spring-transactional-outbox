@@ -1,5 +1,6 @@
 package io.github.outbox.order.api;
 
+import io.github.outbox.order.domain.OrderNotFoundException;
 import io.github.outbox.order.domain.OrderService;
 import io.github.outbox.order.domain.OrderStatus;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -158,6 +160,59 @@ class OrderControllerIntegrationTest {
                 .andExpect(jsonPath("$.type").value("https://spring-transactional-outbox/errors/internal-error"))
                 .andExpect(jsonPath("$.detail").value("The operation could not be completed"))
                 .andExpect(jsonPath("$.path").value("/api/v1/orders"));
+    }
+
+    @Test
+    @DisplayName("IT get() when the order exists should answer 200 with the order")
+    void get_whenOrderExists_shouldAnswer200WithTheOrder() throws Exception {
+        // given
+        when(service.get(7L)).thenReturn(createdOrder(7L));
+
+        // when / then
+        mvc.perform(get("/api/v1/orders/7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.total").value(21.00))
+                .andExpect(jsonPath("$.createdAt").value("2026-11-14T10:15:30Z"));
+    }
+
+    @Test
+    @DisplayName("IT get() when the order does not exist should answer the order-not-found problem")
+    void get_whenOrderDoesNotExist_shouldAnswerTheOrderNotFoundProblem() throws Exception {
+        // given
+        when(service.get(7L)).thenThrow(new OrderNotFoundException(7L));
+
+        // when / then
+        mvc.perform(get("/api/v1/orders/7"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("https://spring-transactional-outbox/errors/order-not-found"))
+                .andExpect(jsonPath("$.title").value("Order not found"))
+                .andExpect(jsonPath("$.detail").value("Order 7 not found"))
+                .andExpect(jsonPath("$.path").value("/api/v1/orders/7"))
+                .andExpect(jsonPath("$.timestamp").value("2026-11-14T10:15:30Z"));
+    }
+
+    @Test
+    @DisplayName("IT get() when id is not positive should answer a validation problem naming id")
+    void get_whenIdIsNotPositive_shouldAnswerValidationProblemNamingId() throws Exception {
+        // when / then
+        mvc.perform(get("/api/v1/orders/0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("https://spring-transactional-outbox/errors/validation-failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("id"))
+                .andExpect(jsonPath("$.errors[0].message").value("id must be positive"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @DisplayName("IT get() when id is not a number should answer 400 without reaching the service")
+    void get_whenIdIsNotNumber_shouldAnswer400WithoutReachingTheService() throws Exception {
+        // when / then
+        mvc.perform(get("/api/v1/orders/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.path").value("/api/v1/orders/abc"));
+        verifyNoInteractions(service);
     }
 
     private static OrderResponse createdOrder(long id) {
