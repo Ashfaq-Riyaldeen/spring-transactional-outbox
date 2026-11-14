@@ -49,6 +49,24 @@ public class OrderService {
         return OrderResponse.from(order);
     }
 
+    /**
+     * Cancels an order that is still {@link OrderStatus#CREATED}.
+     *
+     * @param id id of the order
+     * @return the order as it is after the cancellation
+     * @throws OrderNotFoundException         if there is no such order
+     * @throws OrderAlreadyCancelledException if the order is already cancelled
+     */
+    @Transactional
+    public OrderResponse cancel(long id) {
+        if (!repository.cancel(id, now())) {
+            throw repository.exists(id) ? new OrderAlreadyCancelledException(id) : new OrderNotFoundException(id);
+        }
+        Order order = repository.findById(id).orElseThrow(() -> new OrderNotFoundException(id));
+        log.info("Order cancelled orderId={} customerId={}", order.id(), order.customerId());
+        return OrderResponse.from(order);
+    }
+
     @Transactional(readOnly = true)
     public OrderResponse get(long id) {
         return repository.findById(id)

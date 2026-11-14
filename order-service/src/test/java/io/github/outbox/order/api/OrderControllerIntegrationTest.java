@@ -1,5 +1,6 @@
 package io.github.outbox.order.api;
 
+import io.github.outbox.order.domain.OrderAlreadyCancelledException;
 import io.github.outbox.order.domain.OrderNotFoundException;
 import io.github.outbox.order.domain.OrderService;
 import io.github.outbox.order.domain.OrderStatus;
@@ -249,6 +250,58 @@ class OrderControllerIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.path").value("/api/v1/orders/abc"));
         verifyNoInteractions(service);
+    }
+
+    @Test
+    @DisplayName("IT cancel() when the order is created should answer 200 with the cancelled order")
+    void cancel_whenOrderIsCreated_shouldAnswer200WithTheCancelledOrder() throws Exception {
+        // given
+        when(service.cancel(7L)).thenReturn(cancelledOrder(7L));
+
+        // when / then
+        mvc.perform(post("/api/v1/orders/7/cancel"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancelledAt").value("2026-11-14T10:15:30Z"));
+    }
+
+    @Test
+    @DisplayName("IT cancel() when the order is already cancelled should answer the order-already-cancelled problem")
+    void cancel_whenOrderIsAlreadyCancelled_shouldAnswerTheOrderAlreadyCancelledProblem() throws Exception {
+        // given
+        when(service.cancel(7L)).thenThrow(new OrderAlreadyCancelledException(7L));
+
+        // when / then
+        mvc.perform(post("/api/v1/orders/7/cancel"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("https://spring-transactional-outbox/errors/order-already-cancelled"))
+                .andExpect(jsonPath("$.title").value("Order already cancelled"))
+                .andExpect(jsonPath("$.detail").value("Order 7 is already cancelled"))
+                .andExpect(jsonPath("$.path").value("/api/v1/orders/7/cancel"));
+    }
+
+    @Test
+    @DisplayName("IT cancel() when the order does not exist should answer the order-not-found problem")
+    void cancel_whenOrderDoesNotExist_shouldAnswerTheOrderNotFoundProblem() throws Exception {
+        // given
+        when(service.cancel(7L)).thenThrow(new OrderNotFoundException(7L));
+
+        // when / then
+        mvc.perform(post("/api/v1/orders/7/cancel"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("https://spring-transactional-outbox/errors/order-not-found"));
+    }
+
+    private static OrderResponse cancelledOrder(long id) {
+        return new OrderResponse(
+                id,
+                42L,
+                OrderStatus.CANCELLED,
+                new BigDecimal("21.00"),
+                NOW,
+                NOW,
+                List.of(new OrderItemResponse("sku-1", 2, new BigDecimal("10.50")))
+        );
     }
 
     private static OrderResponse createdOrder(long id) {

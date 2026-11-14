@@ -148,6 +148,48 @@ class OrderServiceUnitTest {
     }
 
     @Test
+    @DisplayName("UT cancel() when the order is created should cancel it and return it as it is after")
+    void cancel_whenOrderIsCreated_shouldCancelItAndReturnItAsItIsAfter() {
+        // given
+        Order cancelled = new Order(7L, 42L, OrderStatus.CANCELLED, BigDecimal.ONE, NOW_IN_MICROS, NOW_IN_MICROS,
+                List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)));
+        when(repository.cancel(7L, NOW_IN_MICROS)).thenReturn(true);
+        when(repository.findById(7L)).thenReturn(Optional.of(cancelled));
+
+        // when
+        OrderResponse response = tested.cancel(7L);
+
+        // then
+        assertThat(response).isEqualTo(OrderResponse.from(cancelled));
+    }
+
+    @Test
+    @DisplayName("UT cancel() when the order is already cancelled should throw OrderAlreadyCancelledException")
+    void cancel_whenOrderIsAlreadyCancelled_shouldThrowOrderAlreadyCancelledException() {
+        // given
+        when(repository.cancel(7L, NOW_IN_MICROS)).thenReturn(false);
+        when(repository.exists(7L)).thenReturn(true);
+
+        // when / then
+        assertThatThrownBy(() -> tested.cancel(7L))
+                .isInstanceOf(OrderAlreadyCancelledException.class)
+                .hasMessage("Order 7 is already cancelled");
+    }
+
+    @Test
+    @DisplayName("UT cancel() when the order does not exist should throw OrderNotFoundException")
+    void cancel_whenOrderDoesNotExist_shouldThrowOrderNotFoundException() {
+        // given
+        when(repository.cancel(7L, NOW_IN_MICROS)).thenReturn(false);
+        when(repository.exists(7L)).thenReturn(false);
+
+        // when / then
+        assertThatThrownBy(() -> tested.cancel(7L))
+                .isInstanceOf(OrderNotFoundException.class)
+                .hasMessage("Order 7 not found");
+    }
+
+    @Test
     @DisplayName("UT get() when the order exists should return it")
     void get_whenOrderExists_shouldReturnIt() {
         // given

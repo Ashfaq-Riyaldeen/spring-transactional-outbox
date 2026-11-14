@@ -40,6 +40,11 @@ public class OrderController {
         return ResponseEntity.created(location).body(order);
     }
 
+    @PostMapping("/{id}/cancel")
+    public OrderResponse cancel(@PathVariable("id") @Positive(message = "id must be positive") Long id) {
+        return service.cancel(id);
+    }
+
     @GetMapping("/{id}")
     public OrderResponse get(@PathVariable("id") @Positive(message = "id must be positive") Long id) {
         return service.get(id);

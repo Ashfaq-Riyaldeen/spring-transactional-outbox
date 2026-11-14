@@ -28,6 +28,7 @@ class OrderRepositoryIntegrationTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
     private static final Instant CREATED_AT = Instant.parse("2026-11-14T10:15:30.123456Z");
+    private static final Instant CANCELLED_AT = Instant.parse("2026-11-14T11:00:00.654321Z");
 
     private static DataSource dataSource;
 
@@ -110,6 +111,58 @@ class OrderRepositoryIntegrationTest {
 
         // then
         assertThat(found).isEmpty();
+    }
+
+    @Test
+    @DisplayName("IT cancel() when the order is created should cancel it and record the time")
+    void cancel_whenOrderIsCreated_shouldCancelItAndRecordTheTime() {
+        // given
+        Order saved = tested.save(42L, List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)), BigDecimal.ONE, CREATED_AT);
+
+        // when
+        boolean cancelled = tested.cancel(saved.id(), CANCELLED_AT);
+
+        // then
+        assertThat(cancelled).isTrue();
+        Order found = tested.findById(saved.id()).orElseThrow();
+        assertThat(found.status()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(found.cancelledAt()).isEqualTo(CANCELLED_AT);
+    }
+
+    @Test
+    @DisplayName("IT cancel() when the order is already cancelled should return false and keep the first time")
+    void cancel_whenOrderIsAlreadyCancelled_shouldReturnFalseAndKeepTheFirstTime() {
+        // given
+        Order saved = tested.save(42L, List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)), BigDecimal.ONE, CREATED_AT);
+        tested.cancel(saved.id(), CANCELLED_AT);
+
+        // when
+        boolean cancelled = tested.cancel(saved.id(), CANCELLED_AT.plusSeconds(60));
+
+        // then
+        assertThat(cancelled).isFalse();
+        assertThat(tested.findById(saved.id()).orElseThrow().cancelledAt()).isEqualTo(CANCELLED_AT);
+    }
+
+    @Test
+    @DisplayName("IT cancel() when the order does not exist should return false")
+    void cancel_whenOrderDoesNotExist_shouldReturnFalse() {
+        // when
+        boolean cancelled = tested.cancel(999L, CANCELLED_AT);
+
+        // then
+        assertThat(cancelled).isFalse();
+    }
+
+    @Test
+    @DisplayName("IT exists() when the order is stored should return true and false for any other id")
+    void exists_whenOrderIsStored_shouldReturnTrueAndFalseForAnyOtherId() {
+        // given
+        Order saved = tested.save(42L, List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)), BigDecimal.ONE, CREATED_AT);
+
+        // when / then
+        assertThat(tested.exists(saved.id())).isTrue();
+        assertThat(tested.exists(saved.id() + 1)).isFalse();
     }
 
     private List<OrderItem> storedItems(long orderId) {

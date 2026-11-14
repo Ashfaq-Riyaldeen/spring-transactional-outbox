@@ -29,6 +29,11 @@ final class OrderProblems {
                 timestamp);
     }
 
+    static ProblemDetail orderAlreadyCancelled(String detail, String instance, Instant timestamp) {
+        return problem(HttpStatus.CONFLICT, ProblemTypes.ORDER_ALREADY_CANCELLED, "Order already cancelled", detail,
+                instance, timestamp);
+    }
+
     static ProblemDetail internalError(String instance, Instant timestamp) {
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, ProblemTypes.INTERNAL_ERROR, "Internal error",
                 INTERNAL_ERROR_DETAIL, instance, timestamp);

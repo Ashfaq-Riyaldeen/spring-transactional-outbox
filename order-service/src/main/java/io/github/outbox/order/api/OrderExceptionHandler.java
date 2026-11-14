@@ -1,6 +1,7 @@
 package io.github.outbox.order.api;
 
 import io.github.outbox.order.api.OrderProblems.FieldViolation;
+import io.github.outbox.order.domain.OrderAlreadyCancelledException;
 import io.github.outbox.order.domain.OrderNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,15 @@ public class OrderExceptionHandler extends ResponseEntityExceptionHandler {
                                                                       HttpServletRequest request) {
         log.debug("Request {} answered 404: {}", request.getRequestURI(), exception.getMessage());
         ProblemDetail problem = OrderProblems.orderNotFound(exception.getMessage(), request.getRequestURI(),
+                clock.instant());
+        return ResponseEntity.status(problem.getStatus()).body(problem);
+    }
+
+    @ExceptionHandler(OrderAlreadyCancelledException.class)
+    public ResponseEntity<ProblemDetail> handleOrderAlreadyCancelledException(OrderAlreadyCancelledException exception,
+                                                                              HttpServletRequest request) {
+        log.debug("Request {} answered 409: {}", request.getRequestURI(), exception.getMessage());
+        ProblemDetail problem = OrderProblems.orderAlreadyCancelled(exception.getMessage(), request.getRequestURI(),
                 clock.instant());
         return ResponseEntity.status(problem.getStatus()).body(problem);
     }

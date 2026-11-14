@@ -84,6 +84,35 @@ public class OrderRepository {
                 .optional();
     }
 
+    /**
+     * Moves an order from {@link OrderStatus#CREATED} to {@link OrderStatus#CANCELLED}. The check and the change are
+     * one statement, so of two concurrent cancellations exactly one succeeds.
+     *
+     * @param id          id of the order
+     * @param cancelledAt the moment to record as the cancellation time
+     * @return {@code true} if the order was cancelled by this call; {@code false} if it does not exist or was not in
+     *         status {@link OrderStatus#CREATED}
+     */
+    public boolean cancel(long id, Instant cancelledAt) {
+        return jdbc.sql("""
+                        UPDATE orders
+                        SET status = :cancelled, cancelled_at = :cancelledAt
+                        WHERE id = :id AND status = :created
+                        """)
+                .param("cancelled", OrderStatus.CANCELLED.name())
+                .param("cancelledAt", Timestamp.from(cancelledAt))
+                .param("id", id)
+                .param("created", OrderStatus.CREATED.name())
+                .update() == 1;
+    }
+
+    public boolean exists(long id) {
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM orders WHERE id = :id)")
+                .param("id", id)
+                .query(Boolean.class)
+                .single();
+    }
+
     private static Instant toInstant(Timestamp timestamp) {
         return timestamp == null ? null : timestamp.toInstant();
     }
