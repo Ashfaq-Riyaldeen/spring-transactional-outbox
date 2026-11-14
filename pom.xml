@@ -26,6 +26,7 @@
 
     <modules>
         <module>events-contract</module>
+        <module>order-service</module>
     </modules>
 
     <properties>
