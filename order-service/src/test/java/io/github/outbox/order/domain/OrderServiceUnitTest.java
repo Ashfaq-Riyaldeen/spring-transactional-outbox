@@ -1,0 +1,104 @@
+package io.github.outbox.order.domain;
+
+import io.github.outbox.order.api.CreateOrderRequest;
+import io.github.outbox.order.api.OrderItemRequest;
+import io.github.outbox.order.api.OrderItemResponse;
+import io.github.outbox.order.api.OrderResponse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class OrderServiceUnitTest {
+
+    // Nanoseconds on purpose: the stored time is cut to what the database keeps.
+    private static final Instant NOW = Instant.parse("2026-11-14T10:15:30.123456789Z");
+    private static final Instant NOW_IN_MICROS = Instant.parse("2026-11-14T10:15:30.123456Z");
+
+    @Mock
+    private OrderRepository repository;
+
+    private OrderService tested;
+
+    @BeforeEach
+    void setUp() {
+        tested = new OrderService(repository, Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    @Test
+    @DisplayName("UT create() when several items are ordered should store the sum of their subtotals as total")
+    void create_whenSeveralItemsAreOrdered_shouldStoreTheSumOfTheirSubtotalsAsTotal() {
+        // given
+        CreateOrderRequest request = new CreateOrderRequest(42L, List.of(
+                new OrderItemRequest("sku-1", 2, new BigDecimal("10.50")),
+                new OrderItemRequest("sku-2", 3, new BigDecimal("1.25"))
+        ));
+        givenRepositoryStoresUnderId(7L);
+
+        // when
+        OrderResponse response = tested.create(request);
+
+        // then
+        verify(repository).save(
+                eq(42L),
+                eq(List.of(
+                        new OrderItem("sku-1", 2, new BigDecimal("10.50")),
+                        new OrderItem("sku-2", 3, new BigDecimal("1.25"))
+                )),
+                eq(new BigDecimal("24.75")),
+                eq(NOW_IN_MICROS)
+        );
+        assertThat(response.total()).isEqualByComparingTo("24.75");
+    }
+
+    @Test
+    @DisplayName("UT create() when the order is stored should return it as created with its items")
+    void create_whenOrderIsStored_shouldReturnItAsCreatedWithItsItems() {
+        // given
+        CreateOrderRequest request = new CreateOrderRequest(42L, List.of(
+                new OrderItemRequest("sku-1", 2, new BigDecimal("10.50"))
+        ));
+        givenRepositoryStoresUnderId(7L);
+
+        // when
+        OrderResponse response = tested.create(request);
+
+        // then
+        assertThat(response.id()).isEqualTo(7L);
+        assertThat(response.customerId()).isEqualTo(42L);
+        assertThat(response.status()).isEqualTo(OrderStatus.CREATED);
+        assertThat(response.createdAt()).isEqualTo(NOW_IN_MICROS);
+        assertThat(response.cancelledAt()).isNull();
+        assertThat(response.items()).containsExactly(new OrderItemResponse("sku-1", 2, new BigDecimal("10.50")));
+    }
+
+    private void givenRepositoryStoresUnderId(long id) {
+        when(repository.save(anyLong(), anyList(), any(BigDecimal.class), any(Instant.class)))
+                .thenAnswer(invocation -> new Order(
+                        id,
+                        invocation.getArgument(0),
+                        OrderStatus.CREATED,
+                        invocation.getArgument(2),
+                        invocation.getArgument(3),
+                        null,
+                        invocation.getArgument(1)
+                ));
+    }
+}
