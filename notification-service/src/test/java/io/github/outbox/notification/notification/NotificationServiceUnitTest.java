@@ -1,0 +1,67 @@
+package io.github.outbox.notification.notification;
+
+import io.github.outbox.contract.OrderCancelledEvent;
+import io.github.outbox.contract.OrderCreatedEvent;
+import io.github.outbox.contract.OrderLine;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.UUID;
+
+import static org.mockito.Mockito.verify;
+
+@ExtendWith(MockitoExtension.class)
+class NotificationServiceUnitTest {
+
+    private static final UUID EVENT_ID = UUID.fromString("0193a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b");
+    private static final Instant NOW = Instant.parse("2026-11-14T10:15:30.123456789Z");
+    private static final Instant NOW_IN_MICROS = Instant.parse("2026-11-14T10:15:30.123456Z");
+
+    @Mock
+    private NotificationRepository repository;
+
+    private NotificationService tested;
+
+    @BeforeEach
+    void setUp() {
+        tested = new NotificationService(repository, Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    @Test
+    @DisplayName("UT notify() when an order was created should store an order-created notification on the log channel")
+    void notify_whenOrderWasCreated_shouldStoreOrderCreatedNotificationOnTheLogChannel() {
+        // given
+        OrderCreatedEvent event = new OrderCreatedEvent(7L, 42L, List.of(new OrderLine("sku-1", 1, BigDecimal.ONE)),
+                BigDecimal.ONE, NOW, "c-1", null);
+
+        // when
+        tested.notify(EVENT_ID, event);
+
+        // then
+        verify(repository).save(EVENT_ID, 7L, 42L, NotificationType.ORDER_CREATED, NotificationChannel.LOG,
+                NOW_IN_MICROS);
+    }
+
+    @Test
+    @DisplayName("UT notify() when an order was cancelled should store an order-cancelled notification")
+    void notify_whenOrderWasCancelled_shouldStoreOrderCancelledNotification() {
+        // given
+        OrderCancelledEvent event = new OrderCancelledEvent(7L, 42L, NOW, "c-1", null);
+
+        // when
+        tested.notify(EVENT_ID, event);
+
+        // then
+        verify(repository).save(EVENT_ID, 7L, 42L, NotificationType.ORDER_CANCELLED, NotificationChannel.LOG,
+                NOW_IN_MICROS);
+    }
+}

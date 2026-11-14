@@ -10,6 +10,37 @@ spring:
       connection-timeout: 2000
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_GROUP_ID:notification-service}
+      auto-offset-reset: earliest
+      # offsets are committed by the listener container after an event is processed
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+app:
+  kafka:
+    order-events-topic: ${ORDER_EVENTS_TOPIC:order-events}
+
+oncebox:
+  # inbox cleanup only
+  thread-pool-size: 1
+  outbox:
+    enabled: false
+  inbox:
+    enabled: true
+    source:
+      type: kafka
+    mappings:
+      order-created: io.github.outbox.contract.OrderCreatedEvent
+      order-cancelled: io.github.outbox.contract.OrderCancelledEvent
+    clean-up:
+      # longer than any redelivery window, so a late duplicate still finds its id
+      ttl: 7d
+      polling:
+        initial-delay: 1m
 
 server:
   port: ${SERVER_PORT:8081}
