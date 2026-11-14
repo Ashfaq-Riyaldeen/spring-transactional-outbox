@@ -60,6 +60,11 @@
                 <artifactId>oncebox-kafka</artifactId>
                 <version>${oncebox.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.github.dmitriy-iliyov</groupId>
+                <artifactId>oncebox-dlq-api</artifactId>
+                <version>${oncebox.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

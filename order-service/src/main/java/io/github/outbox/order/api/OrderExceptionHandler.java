@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -32,9 +34,12 @@ import java.util.List;
  * <p>
  * Not scoped to the controllers' package: a request no handler matches (an unknown path, an unsupported method or
  * content type) fails before a controller is chosen, and a scoped advice would leave it to the default error page.
+ * Advices scoped to other controllers, such as the outbox DLQ API's, are ordered ahead of this one and keep
+ * answering their own.
  */
 @Slf4j
 @RestControllerAdvice
+@Order(Ordered.LOWEST_PRECEDENCE)
 @RequiredArgsConstructor
 public class OrderExceptionHandler extends ResponseEntityExceptionHandler {
 

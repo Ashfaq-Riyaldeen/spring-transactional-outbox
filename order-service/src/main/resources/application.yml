@@ -28,8 +28,8 @@ app:
       replicas: ${ORDER_EVENTS_REPLICAS:1}
 
 oncebox:
-  # stuck recovery and cleanup, plus one poller per event type
-  thread-pool-size: 4
+  # stuck recovery, cleanup and three DLQ jobs, plus one poller per event type
+  thread-pool-size: 7
   outbox:
     sender:
       type: kafka
@@ -68,6 +68,12 @@ oncebox:
       ttl: 24h
       polling:
         initial-delay: 1m
+    dlq:
+      enabled: true
+      polling:
+        initial-delay: 1m
+      clean-up:
+        ttl: 7d
 
 server:
   port: ${SERVER_PORT:8080}
