@@ -85,6 +85,25 @@ class OrderServiceUnitTest {
     }
 
     @Test
+    @DisplayName("UT create() when prices come with any scale should store them and the total with two decimals")
+    void create_whenPricesComeWithAnyScale_shouldStoreThemAndTheTotalWithTwoDecimals() {
+        // given
+        CreateOrderRequest request = new CreateOrderRequest(42L, List.of(
+                new OrderItemRequest("sku-1", 2, new BigDecimal("10.5")),
+                new OrderItemRequest("sku-2", 1, new BigDecimal("1E+2"))
+        ));
+        givenRepositoryStoresUnderId(7L);
+
+        // when
+        OrderResponse response = tested.create(request, "c-1");
+
+        // then
+        assertThat(response.total().toPlainString()).isEqualTo("121.00");
+        assertThat(response.items()).extracting(item -> item.price().toPlainString())
+                .containsExactly("10.50", "100.00");
+    }
+
+    @Test
     @DisplayName("UT create() when the order is stored should return it as created with its items")
     void create_whenOrderIsStored_shouldReturnItAsCreatedWithItsItems() {
         // given

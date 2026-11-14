@@ -23,7 +23,9 @@ public record OrderItemRequest(
 
         @NotNull(message = "price must not be null")
         @DecimalMin(value = "0.00", message = "price must not be negative")
-        @Digits(integer = 17, fraction = 2, message = "price must have at most {integer} integer and {fraction} fraction digits")
+        // 12 integer digits times the largest quantity and number of items keeps the total within NUMERIC(19, 2)
+        @Digits(integer = 12, fraction = 2,
+                message = "price must have at most {integer} integer and {fraction} fraction digits")
         BigDecimal price
 ) {
 }

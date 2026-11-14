@@ -161,6 +161,43 @@ class OrderControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("IT create() when a price has 13 integer digits should name the price, as its total could not be stored")
+    void create_whenPriceHas13IntegerDigits_shouldNameThePrice() throws Exception {
+        // when / then
+        mvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"customerId": 42, "items": [{"productId": "sku-1", "quantity": 1000, "price": 1000000000000.00}]}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("items[0].price"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("price must have at most 12 integer and 2 fraction digits"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @DisplayName("IT create() when the quantity is fractional should answer 400 instead of truncating it")
+    void create_whenQuantityIsFractional_shouldAnswer400InsteadOfTruncatingIt() throws Exception {
+        // when / then
+        mvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"customerId": 42, "items": [{"productId": "sku-1", "quantity": 2.9, "price": 10.50}]}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.path").value("/api/v1/orders"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @DisplayName("IT create() when the quantity is sent as a string should answer 400 instead of converting it")
+    void create_whenQuantityIsSentAsString_shouldAnswer400InsteadOfConvertingIt() throws Exception {
+        // when / then
+        mvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"customerId": 42, "items": [{"productId": "sku-1", "quantity": "5", "price": 10.50}]}
+                        """))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
+    }
+
+    @Test
     @DisplayName("IT create() when the body is not JSON should answer Spring's 400 problem stamped with path")
     void create_whenBodyIsNotJson_shouldAnswerSpringsProblemStampedWithPath() throws Exception {
         // when / then

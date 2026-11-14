@@ -38,7 +38,7 @@ public class OrderService {
     @Transactional
     public OrderResponse create(CreateOrderRequest request, String correlationId) {
         List<OrderItem> items = request.items().stream()
-                .map(line -> new OrderItem(line.productId(), line.quantity(), line.price()))
+                .map(line -> new OrderItem(line.productId(), line.quantity(), line.price().setScale(2)))
                 .toList();
         BigDecimal total = items.stream()
                 .map(OrderItem::subtotal)

@@ -10,6 +10,12 @@ spring:
       connection-timeout: 2000
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+  jackson:
+    # a fractional quantity or a number sent as a string is rejected rather than truncated or converted
+    deserialization:
+      accept-float-as-int: false
+    mapper:
+      allow-coercion-of-scalars: false
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
