@@ -18,7 +18,9 @@ class KafkaErrorHandlingConfigurationIntegrationTest {
             .withPropertyValues(
                     "app.kafka.order-events-topic=order-events",
                     "app.kafka.retries=3",
-                    "app.kafka.retry-interval=1s"
+                    "app.kafka.retry-interval=1s",
+                    "app.kafka.transient-retry.initial-interval=1s",
+                    "app.kafka.transient-retry.max-interval=30s"
             );
 
     @Test
@@ -46,6 +48,22 @@ class KafkaErrorHandlingConfigurationIntegrationTest {
         runner.withPropertyValues("app.kafka.retries=-1")
                 .run(context -> assertThat(context).hasFailed()
                         .getFailure().rootCause().hasMessageContaining("retries"));
+    }
+
+    @Test
+    @DisplayName("IT context when the transient retry is not configured should fail naming the property")
+    void context_whenTransientRetryIsNotConfigured_shouldFailNamingTheProperty() {
+        // when / then
+        new ApplicationContextRunner()
+                .withUserConfiguration(KafkaErrorHandlingConfiguration.class)
+                .withBean(KafkaTemplate.class, () -> mock(KafkaTemplate.class))
+                .withPropertyValues(
+                        "app.kafka.order-events-topic=order-events",
+                        "app.kafka.retries=3",
+                        "app.kafka.retry-interval=1s"
+                )
+                .run(context -> assertThat(context).hasFailed()
+                        .getFailure().rootCause().hasMessageContaining("transientRetry"));
     }
 
     @Test

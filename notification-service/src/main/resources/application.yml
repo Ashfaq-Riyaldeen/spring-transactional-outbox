@@ -30,6 +30,9 @@ app:
     order-events-topic: ${ORDER_EVENTS_TOPIC:order-events}
     retries: 3
     retry-interval: 1s
+    transient-retry:
+      initial-interval: 1s
+      max-interval: 30s
 
 oncebox:
   # inbox cleanup only

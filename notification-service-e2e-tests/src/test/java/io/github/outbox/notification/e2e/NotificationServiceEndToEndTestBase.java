@@ -40,6 +40,8 @@ abstract class NotificationServiceEndToEndTestBase {
         registry.add("spring.kafka.bootstrap-servers", NotificationEndToEndContainers.KAFKA::getBootstrapServers);
         registry.add("app.kafka.order-events-topic", () -> TOPIC);
         registry.add("app.kafka.retry-interval", () -> "200ms");
+        registry.add("app.kafka.transient-retry.initial-interval", () -> "200ms");
+        registry.add("app.kafka.transient-retry.max-interval", () -> "1s");
     }
 
     @AfterEach
