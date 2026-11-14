@@ -29,7 +29,7 @@ app:
 
 oncebox:
   # stuck recovery and cleanup, plus one poller per event type
-  thread-pool-size: 3
+  thread-pool-size: 4
   outbox:
     sender:
       type: kafka
@@ -50,6 +50,16 @@ oncebox:
         backoff:
           delay: 2s
           multiplier: 2.0
+      order-cancelled:
+        topic: ${app.kafka.order-events.name}
+        batch-size: 50
+        polling:
+          type: fixed
+          fixed-delay: 1s
+        max-retries: 3
+        backoff:
+          delay: 5s
+          multiplier: 3.0
     stuck-recovery:
       max-batch-processing-time: 5m
       polling:

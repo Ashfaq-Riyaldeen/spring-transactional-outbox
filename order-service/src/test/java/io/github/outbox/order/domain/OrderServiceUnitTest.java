@@ -46,13 +46,16 @@ class OrderServiceUnitTest {
     private OrderRepository repository;
 
     @Mock
+    private OrderCancellation cancellation;
+
+    @Mock
     private OutboxPublisher outboxPublisher;
 
     private OrderService tested;
 
     @BeforeEach
     void setUp() {
-        tested = new OrderService(repository, outboxPublisher, Clock.fixed(NOW, ZoneOffset.UTC));
+        tested = new OrderService(repository, cancellation, outboxPublisher, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -148,45 +151,34 @@ class OrderServiceUnitTest {
     }
 
     @Test
-    @DisplayName("UT cancel() when the order is created should cancel it and return it as it is after")
-    void cancel_whenOrderIsCreated_shouldCancelItAndReturnItAsItIsAfter() {
+    @DisplayName("UT cancel() when the cancellation succeeds should return the cancelled order")
+    void cancel_whenCancellationSucceeds_shouldReturnTheCancelledOrder() {
         // given
         Order cancelled = new Order(7L, 42L, OrderStatus.CANCELLED, BigDecimal.ONE, NOW_IN_MICROS, NOW_IN_MICROS,
                 List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)));
-        when(repository.cancel(7L, NOW_IN_MICROS)).thenReturn(true);
-        when(repository.findById(7L)).thenReturn(Optional.of(cancelled));
+        when(cancellation.cancel(7L, "c-1")).thenReturn(cancelled);
 
         // when
-        OrderResponse response = tested.cancel(7L);
+        OrderResponse response = tested.cancel(7L, "c-1");
 
         // then
         assertThat(response).isEqualTo(OrderResponse.from(cancelled));
     }
 
     @Test
-    @DisplayName("UT cancel() when the order is already cancelled should throw OrderAlreadyCancelledException")
-    void cancel_whenOrderIsAlreadyCancelled_shouldThrowOrderAlreadyCancelledException() {
+    @DisplayName("UT cancel() when no correlation id is given should cancel under a generated one")
+    void cancel_whenNoCorrelationIdIsGiven_shouldCancelUnderGeneratedOne() {
         // given
-        when(repository.cancel(7L, NOW_IN_MICROS)).thenReturn(false);
-        when(repository.exists(7L)).thenReturn(true);
+        Order cancelled = new Order(7L, 42L, OrderStatus.CANCELLED, BigDecimal.ONE, NOW_IN_MICROS, NOW_IN_MICROS,
+                List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)));
+        ArgumentCaptor<String> correlationId = ArgumentCaptor.forClass(String.class);
+        when(cancellation.cancel(eq(7L), correlationId.capture())).thenReturn(cancelled);
 
-        // when / then
-        assertThatThrownBy(() -> tested.cancel(7L))
-                .isInstanceOf(OrderAlreadyCancelledException.class)
-                .hasMessage("Order 7 is already cancelled");
-    }
+        // when
+        tested.cancel(7L, null);
 
-    @Test
-    @DisplayName("UT cancel() when the order does not exist should throw OrderNotFoundException")
-    void cancel_whenOrderDoesNotExist_shouldThrowOrderNotFoundException() {
-        // given
-        when(repository.cancel(7L, NOW_IN_MICROS)).thenReturn(false);
-        when(repository.exists(7L)).thenReturn(false);
-
-        // when / then
-        assertThatThrownBy(() -> tested.cancel(7L))
-                .isInstanceOf(OrderNotFoundException.class)
-                .hasMessage("Order 7 not found");
+        // then
+        assertThat(UUID.fromString(correlationId.getValue())).isNotNull();
     }
 
     @Test

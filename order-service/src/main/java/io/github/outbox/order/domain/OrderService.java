@@ -3,7 +3,6 @@ package io.github.outbox.order.domain;
 import io.github.dmitriyiliyov.oncebox.core.outbox.OutboxPublisher;
 import io.github.outbox.contract.OrderCreatedEvent;
 import io.github.outbox.contract.OrderEventTypes;
-import io.github.outbox.contract.OrderLine;
 import io.github.outbox.order.api.CreateOrderRequest;
 import io.github.outbox.order.api.OrderResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +23,7 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository repository;
+    private final OrderCancellation cancellation;
     private final OutboxPublisher outboxPublisher;
     private final Clock clock;
 
@@ -44,25 +44,24 @@ public class OrderService {
                 .map(OrderItem::subtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         Order order = repository.save(request.customerId(), items, total, now());
-        outboxPublisher.publish(OrderEventTypes.ORDER_CREATED, createdEvent(order, correlationId));
+        outboxPublisher.publish(OrderEventTypes.ORDER_CREATED, order.createdEvent(correlationIdOrNew(correlationId)));
         log.info("Order created orderId={} customerId={} total={}", order.id(), order.customerId(), order.total());
         return OrderResponse.from(order);
     }
 
     /**
-     * Cancels an order that is still {@link OrderStatus#CREATED}.
+     * Cancels an order that is still {@link OrderStatus#CREATED} and, in the same transaction, publishes the
+     * {@link io.github.outbox.contract.OrderCancelledEvent} about it.
      *
-     * @param id id of the order
+     * @param id            id of the order
+     * @param correlationId correlation id of the request; a new one is generated when it is {@code null} or blank
      * @return the order as it is after the cancellation
      * @throws OrderNotFoundException         if there is no such order
      * @throws OrderAlreadyCancelledException if the order is already cancelled
      */
     @Transactional
-    public OrderResponse cancel(long id) {
-        if (!repository.cancel(id, now())) {
-            throw repository.exists(id) ? new OrderAlreadyCancelledException(id) : new OrderNotFoundException(id);
-        }
-        Order order = repository.findById(id).orElseThrow(() -> new OrderNotFoundException(id));
+    public OrderResponse cancel(long id, String correlationId) {
+        Order order = cancellation.cancel(id, correlationIdOrNew(correlationId));
         log.info("Order cancelled orderId={} customerId={}", order.id(), order.customerId());
         return OrderResponse.from(order);
     }
@@ -72,21 +71,6 @@ public class OrderService {
         return repository.findById(id)
                 .map(OrderResponse::from)
                 .orElseThrow(() -> new OrderNotFoundException(id));
-    }
-
-    private static OrderCreatedEvent createdEvent(Order order, String correlationId) {
-        List<OrderLine> lines = order.items().stream()
-                .map(item -> new OrderLine(item.productId(), item.quantity(), item.price()))
-                .toList();
-        return new OrderCreatedEvent(
-                order.id(),
-                order.customerId(),
-                lines,
-                order.total(),
-                order.createdAt(),
-                correlationIdOrNew(correlationId),
-                null
-        );
     }
 
     private static String correlationIdOrNew(String correlationId) {

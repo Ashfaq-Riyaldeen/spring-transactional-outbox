@@ -256,7 +256,7 @@ class OrderControllerIntegrationTest {
     @DisplayName("IT cancel() when the order is created should answer 200 with the cancelled order")
     void cancel_whenOrderIsCreated_shouldAnswer200WithTheCancelledOrder() throws Exception {
         // given
-        when(service.cancel(7L)).thenReturn(cancelledOrder(7L));
+        when(service.cancel(eq(7L), any())).thenReturn(cancelledOrder(7L));
 
         // when / then
         mvc.perform(post("/api/v1/orders/7/cancel"))
@@ -269,7 +269,7 @@ class OrderControllerIntegrationTest {
     @DisplayName("IT cancel() when the order is already cancelled should answer the order-already-cancelled problem")
     void cancel_whenOrderIsAlreadyCancelled_shouldAnswerTheOrderAlreadyCancelledProblem() throws Exception {
         // given
-        when(service.cancel(7L)).thenThrow(new OrderAlreadyCancelledException(7L));
+        when(service.cancel(eq(7L), any())).thenThrow(new OrderAlreadyCancelledException(7L));
 
         // when / then
         mvc.perform(post("/api/v1/orders/7/cancel"))
@@ -284,7 +284,7 @@ class OrderControllerIntegrationTest {
     @DisplayName("IT cancel() when the order does not exist should answer the order-not-found problem")
     void cancel_whenOrderDoesNotExist_shouldAnswerTheOrderNotFoundProblem() throws Exception {
         // given
-        when(service.cancel(7L)).thenThrow(new OrderNotFoundException(7L));
+        when(service.cancel(eq(7L), any())).thenThrow(new OrderNotFoundException(7L));
 
         // when / then
         mvc.perform(post("/api/v1/orders/7/cancel"))

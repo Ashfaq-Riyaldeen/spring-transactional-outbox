@@ -41,8 +41,12 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/cancel")
-    public OrderResponse cancel(@PathVariable("id") @Positive(message = "id must be positive") Long id) {
-        return service.cancel(id);
+    public OrderResponse cancel(
+            @RequestHeader(value = CORRELATION_ID_HEADER, required = false)
+            @Size(max = 128, message = "X-Correlation-Id must be at most {max} characters") String correlationId,
+            @PathVariable("id") @Positive(message = "id must be positive") Long id
+    ) {
+        return service.cancel(id, correlationId);
     }
 
     @GetMapping("/{id}")
