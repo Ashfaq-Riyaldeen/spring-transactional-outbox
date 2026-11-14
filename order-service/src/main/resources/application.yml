@@ -10,6 +10,54 @@ spring:
       connection-timeout: 2000
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      # oncebox hands the producer an already serialized JSON payload
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+
+app:
+  kafka:
+    order-events:
+      name: ${ORDER_EVENTS_TOPIC:order-events}
+      partitions: ${ORDER_EVENTS_PARTITIONS:3}
+      replicas: ${ORDER_EVENTS_REPLICAS:1}
+
+oncebox:
+  # stuck recovery and cleanup, plus one poller per event type
+  thread-pool-size: 3
+  outbox:
+    sender:
+      type: kafka
+      bean-name: kafkaTemplate
+    defaults:
+      polling:
+        initial-delay: 5s
+    events:
+      order-created:
+        topic: ${app.kafka.order-events.name}
+        batch-size: 250
+        polling:
+          type: adaptive
+          min-fixed-delay: 100ms
+          max-fixed-delay: 5s
+          multiplier: 2.0
+        max-retries: 5
+        backoff:
+          delay: 2s
+          multiplier: 2.0
+    stuck-recovery:
+      max-batch-processing-time: 5m
+      polling:
+        initial-delay: 30s
+    clean-up:
+      ttl: 24h
+      polling:
+        initial-delay: 1m
 
 server:
   port: ${SERVER_PORT:8080}

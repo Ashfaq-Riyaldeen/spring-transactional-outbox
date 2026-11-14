@@ -22,6 +22,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -48,7 +49,7 @@ class OrderControllerIntegrationTest {
     @DisplayName("IT create() when the request is valid should answer 201 with the order and its location")
     void create_whenRequestIsValid_shouldAnswer201WithTheOrderAndItsLocation() throws Exception {
         // given
-        when(service.create(any(CreateOrderRequest.class))).thenReturn(createdOrder(7L));
+        when(service.create(any(CreateOrderRequest.class), any())).thenReturn(createdOrder(7L));
 
         // when / then
         mvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON).content("""
@@ -61,7 +62,42 @@ class OrderControllerIntegrationTest {
                 .andExpect(jsonPath("$.items[0].productId").value("sku-1"));
         verify(service).create(new CreateOrderRequest(42L, List.of(
                 new OrderItemRequest("sku-1", 2, new BigDecimal("10.50"))
-        )));
+        )), null);
+    }
+
+    @Test
+    @DisplayName("IT create() when a correlation id header is sent should pass it to the service")
+    void create_whenCorrelationIdHeaderIsSent_shouldPassItToTheService() throws Exception {
+        // given
+        when(service.create(any(CreateOrderRequest.class), any())).thenReturn(createdOrder(7L));
+
+        // when
+        mvc.perform(post("/api/v1/orders")
+                        .header("X-Correlation-Id", "c-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"customerId": 42, "items": [{"productId": "sku-1", "quantity": 2, "price": 10.50}]}
+                                """))
+                .andExpect(status().isCreated());
+
+        // then
+        verify(service).create(any(CreateOrderRequest.class), eq("c-1"));
+    }
+
+    @Test
+    @DisplayName("IT create() when the correlation id header is too long should name the header in the problem")
+    void create_whenCorrelationIdHeaderIsTooLong_shouldNameTheHeaderInTheProblem() throws Exception {
+        // when / then
+        mvc.perform(post("/api/v1/orders")
+                        .header("X-Correlation-Id", "c".repeat(129))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"customerId": 42, "items": [{"productId": "sku-1", "quantity": 2, "price": 10.50}]}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("X-Correlation-Id"))
+                .andExpect(jsonPath("$.errors[0].message").value("X-Correlation-Id must be at most 128 characters"));
+        verifyNoInteractions(service);
     }
 
     @Test
@@ -149,7 +185,7 @@ class OrderControllerIntegrationTest {
     @DisplayName("IT create() when the service fails unexpectedly should answer 500 without the cause's message")
     void create_whenServiceFailsUnexpectedly_shouldAnswer500WithoutTheCausesMessage() throws Exception {
         // given
-        when(service.create(any(CreateOrderRequest.class)))
+        when(service.create(any(CreateOrderRequest.class), any()))
                 .thenThrow(new IllegalStateException("relation \"orders\" does not exist"));
 
         // when / then

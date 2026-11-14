@@ -1,5 +1,9 @@
 package io.github.outbox.order.domain;
 
+import io.github.dmitriyiliyov.oncebox.core.outbox.OutboxPublisher;
+import io.github.outbox.contract.OrderCreatedEvent;
+import io.github.outbox.contract.OrderEventTypes;
+import io.github.outbox.contract.OrderLine;
 import io.github.outbox.order.api.CreateOrderRequest;
 import io.github.outbox.order.api.OrderItemRequest;
 import io.github.outbox.order.api.OrderItemResponse;
@@ -8,6 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -17,6 +23,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,11 +45,14 @@ class OrderServiceUnitTest {
     @Mock
     private OrderRepository repository;
 
+    @Mock
+    private OutboxPublisher outboxPublisher;
+
     private OrderService tested;
 
     @BeforeEach
     void setUp() {
-        tested = new OrderService(repository, Clock.fixed(NOW, ZoneOffset.UTC));
+        tested = new OrderService(repository, outboxPublisher, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -55,7 +66,7 @@ class OrderServiceUnitTest {
         givenRepositoryStoresUnderId(7L);
 
         // when
-        OrderResponse response = tested.create(request);
+        OrderResponse response = tested.create(request, "c-1");
 
         // then
         verify(repository).save(
@@ -80,7 +91,7 @@ class OrderServiceUnitTest {
         givenRepositoryStoresUnderId(7L);
 
         // when
-        OrderResponse response = tested.create(request);
+        OrderResponse response = tested.create(request, "c-1");
 
         // then
         assertThat(response.id()).isEqualTo(7L);
@@ -89,6 +100,51 @@ class OrderServiceUnitTest {
         assertThat(response.createdAt()).isEqualTo(NOW_IN_MICROS);
         assertThat(response.cancelledAt()).isNull();
         assertThat(response.items()).containsExactly(new OrderItemResponse("sku-1", 2, new BigDecimal("10.50")));
+    }
+
+    @Test
+    @DisplayName("UT create() when the order is stored should publish order created with its lines and correlation id")
+    void create_whenOrderIsStored_shouldPublishOrderCreatedWithItsLinesAndCorrelationId() {
+        // given
+        CreateOrderRequest request = new CreateOrderRequest(42L, List.of(
+                new OrderItemRequest("sku-1", 2, new BigDecimal("10.50"))
+        ));
+        givenRepositoryStoresUnderId(7L);
+
+        // when
+        tested.create(request, "c-1");
+
+        // then
+        InOrder inOrder = inOrder(repository, outboxPublisher);
+        inOrder.verify(repository).save(anyLong(), anyList(), any(BigDecimal.class), any(Instant.class));
+        inOrder.verify(outboxPublisher).publish(OrderEventTypes.ORDER_CREATED, new OrderCreatedEvent(
+                7L,
+                42L,
+                List.of(new OrderLine("sku-1", 2, new BigDecimal("10.50"))),
+                new BigDecimal("21.00"),
+                NOW_IN_MICROS,
+                "c-1",
+                null
+        ));
+    }
+
+    @Test
+    @DisplayName("UT create() when no correlation id is given should publish the event under a generated one")
+    void create_whenNoCorrelationIdIsGiven_shouldPublishTheEventUnderGeneratedOne() {
+        // given
+        CreateOrderRequest request = new CreateOrderRequest(42L, List.of(
+                new OrderItemRequest("sku-1", 2, new BigDecimal("10.50"))
+        ));
+        givenRepositoryStoresUnderId(7L);
+        ArgumentCaptor<OrderCreatedEvent> event = ArgumentCaptor.forClass(OrderCreatedEvent.class);
+
+        // when
+        tested.create(request, " ");
+
+        // then
+        verify(outboxPublisher).publish(eq(OrderEventTypes.ORDER_CREATED), event.capture());
+        assertThat(event.getValue().correlationId()).isNotBlank();
+        assertThat(UUID.fromString(event.getValue().correlationId())).isNotNull();
     }
 
     @Test

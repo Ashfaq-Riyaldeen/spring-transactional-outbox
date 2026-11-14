@@ -5,6 +5,7 @@ import io.github.outbox.order.domain.OrderNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -13,6 +14,9 @@ import org.springframework.lang.Nullable;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
@@ -71,7 +75,7 @@ public class OrderExceptionHandler extends ResponseEntityExceptionHandler {
                         .map(error -> new FieldViolation(
                                 error instanceof FieldError fieldError
                                         ? fieldError.getField()
-                                        : result.getMethodParameter().getParameterName(),
+                                        : requestName(result.getMethodParameter()),
                                 error.getDefaultMessage()
                         )))
                 .toList();
@@ -94,6 +98,23 @@ public class OrderExceptionHandler extends ResponseEntityExceptionHandler {
             OrderProblems.stamp(problem, uri, clock.instant());
         }
         return response;
+    }
+
+    // The name the client used: the header, path variable or query parameter, not the Java parameter.
+    private static String requestName(MethodParameter parameter) {
+        RequestHeader header = parameter.getParameterAnnotation(RequestHeader.class);
+        if (header != null && !header.value().isEmpty()) {
+            return header.value();
+        }
+        PathVariable pathVariable = parameter.getParameterAnnotation(PathVariable.class);
+        if (pathVariable != null && !pathVariable.value().isEmpty()) {
+            return pathVariable.value();
+        }
+        RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
+        if (requestParam != null && !requestParam.value().isEmpty()) {
+            return requestParam.value();
+        }
+        return parameter.getParameterName();
     }
 
     private ResponseEntity<Object> validationFailed(Exception exception, List<FieldViolation> errors,
