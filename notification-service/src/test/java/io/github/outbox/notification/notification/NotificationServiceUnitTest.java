@@ -3,6 +3,7 @@ package io.github.outbox.notification.notification;
 import io.github.outbox.contract.OrderCancelledEvent;
 import io.github.outbox.contract.OrderCreatedEvent;
 import io.github.outbox.contract.OrderLine;
+import io.github.outbox.notification.api.NotificationResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceUnitTest {
@@ -63,5 +66,20 @@ class NotificationServiceUnitTest {
         // then
         verify(repository).save(EVENT_ID, 7L, 42L, NotificationType.ORDER_CANCELLED, NotificationChannel.LOG,
                 NOW_IN_MICROS);
+    }
+
+    @Test
+    @DisplayName("UT findByOrderId() when the order has notifications should return them as responses")
+    void findByOrderId_whenOrderHasNotifications_shouldReturnThemAsResponses() {
+        // given
+        Notification notification = new Notification(1L, EVENT_ID, 7L, 42L, NotificationType.ORDER_CREATED,
+                NotificationChannel.LOG, NOW_IN_MICROS);
+        when(repository.findByOrderId(7L)).thenReturn(List.of(notification));
+
+        // when
+        List<NotificationResponse> found = tested.findByOrderId(7L);
+
+        // then
+        assertThat(found).containsExactly(NotificationResponse.from(notification));
     }
 }

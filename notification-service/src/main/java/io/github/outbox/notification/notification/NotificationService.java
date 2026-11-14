@@ -3,6 +3,7 @@ package io.github.outbox.notification.notification;
 import io.github.outbox.contract.OrderCancelledEvent;
 import io.github.outbox.contract.OrderCreatedEvent;
 import io.github.outbox.contract.OrderEvent;
+import io.github.outbox.notification.api.NotificationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -39,5 +41,10 @@ public class NotificationService {
         log.info("Notification sent type={} orderId={} customerId={} eventId={} correlationId={}",
                 type, event.orderId(), event.customerId(), eventId, event.correlationId());
         return notification;
+    }
+
+    @Transactional(readOnly = true)
+    public List<NotificationResponse> findByOrderId(long orderId) {
+        return repository.findByOrderId(orderId).stream().map(NotificationResponse::from).toList();
     }
 }

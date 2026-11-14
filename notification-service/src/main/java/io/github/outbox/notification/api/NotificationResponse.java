@@ -1,0 +1,40 @@
+package io.github.outbox.notification.api;
+
+import io.github.outbox.notification.notification.Notification;
+import io.github.outbox.notification.notification.NotificationChannel;
+import io.github.outbox.notification.notification.NotificationType;
+
+import java.time.Instant;
+import java.util.UUID;
+
+/**
+ * A notification as the API returns it.
+ *
+ * @param id         id of the notification
+ * @param eventId    id of the order event it was sent for
+ * @param orderId    order it is about
+ * @param customerId customer it was sent to
+ * @param type       what happened to the order
+ * @param channel    where it was delivered
+ * @param createdAt  the moment it was stored
+ */
+public record NotificationResponse(long id,
+                                   UUID eventId,
+                                   long orderId,
+                                   long customerId,
+                                   NotificationType type,
+                                   NotificationChannel channel,
+                                   Instant createdAt) {
+
+    public static NotificationResponse from(Notification notification) {
+        return new NotificationResponse(
+                notification.id(),
+                notification.eventId(),
+                notification.orderId(),
+                notification.customerId(),
+                notification.type(),
+                notification.channel(),
+                notification.createdAt()
+        );
+    }
+}

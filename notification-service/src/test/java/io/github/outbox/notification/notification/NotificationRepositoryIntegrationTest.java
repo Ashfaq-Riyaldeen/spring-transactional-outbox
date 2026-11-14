@@ -14,6 +14,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import javax.sql.DataSource;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,6 +28,7 @@ class NotificationRepositoryIntegrationTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
     private static final UUID EVENT_ID = UUID.fromString("0193a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b");
+    private static final UUID OTHER_EVENT_ID = UUID.fromString("0193a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5c");
     private static final Instant CREATED_AT = Instant.parse("2026-11-14T10:15:30.123456Z");
 
     private static DataSource dataSource;
@@ -62,5 +64,32 @@ class NotificationRepositoryIntegrationTest {
         assertThat(row.get("type")).isEqualTo("ORDER_CANCELLED");
         assertThat(row.get("channel")).isEqualTo("LOG");
         assertThat(((Timestamp) row.get("created_at")).toInstant()).isEqualTo(CREATED_AT);
+    }
+
+    @Test
+    @DisplayName("IT findByOrderId() when the order has notifications should return only its own in the order stored")
+    void findByOrderId_whenOrderHasNotifications_shouldReturnOnlyItsOwnInTheOrderStored() {
+        // given
+        Notification created = tested.save(EVENT_ID, 7L, 42L, NotificationType.ORDER_CREATED, NotificationChannel.LOG,
+                CREATED_AT);
+        Notification cancelled = tested.save(OTHER_EVENT_ID, 7L, 42L, NotificationType.ORDER_CANCELLED,
+                NotificationChannel.LOG, CREATED_AT.plusSeconds(60));
+        tested.save(UUID.randomUUID(), 8L, 42L, NotificationType.ORDER_CREATED, NotificationChannel.LOG, CREATED_AT);
+
+        // when
+        List<Notification> found = tested.findByOrderId(7L);
+
+        // then
+        assertThat(found).containsExactly(created, cancelled);
+    }
+
+    @Test
+    @DisplayName("IT findByOrderId() when the order has no notifications should return an empty list")
+    void findByOrderId_whenOrderHasNoNotifications_shouldReturnEmptyList() {
+        // when
+        List<Notification> found = tested.findByOrderId(7L);
+
+        // then
+        assertThat(found).isEmpty();
     }
 }
