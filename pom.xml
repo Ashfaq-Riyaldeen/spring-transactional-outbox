@@ -28,6 +28,7 @@
         <module>events-contract</module>
         <module>order-service</module>
         <module>order-service-e2e-tests</module>
+        <module>notification-service</module>
     </modules>
 
     <properties>
