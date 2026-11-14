@@ -24,6 +24,10 @@
         </license>
     </licenses>
 
+    <modules>
+        <module>events-contract</module>
+    </modules>
+
     <properties>
         <java.version>21</java.version>
         <testcontainers.version>1.21.3</testcontainers.version>
@@ -31,6 +35,16 @@
         <jacoco.line.coverage.minimum>0.80</jacoco.line.coverage.minimum>
         <mockito.agent.argLine>-javaagent:${org.mockito:mockito-core:jar}</mockito.agent.argLine>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.github.dmitriyiliyov</groupId>
+                <artifactId>events-contract</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <pluginManagement>
