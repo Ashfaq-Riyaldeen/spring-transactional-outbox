@@ -21,8 +21,13 @@ import org.springframework.util.backoff.FixedBackOff;
  * long as it lasts, holding the partition: an outage must delay notifications, not send healthy events to the dead
  * letter topic where nothing reads them. Only a failure that repeats the same way gets the fixed retries.
  * <p>
+ * A record that cannot be read goes to the dead letter topic at once, without retries: a payload that does not
+ * convert, an event type missing from the inbox mappings, an event id header absent or not a UUID. These fail as
+ * {@link IllegalArgumentException} and fail the same way on every attempt, so retrying would only hold the
+ * partition.
+ * <p>
  * The handler is picked up by every listener container factory configured through Spring Boot, the inbox one
- * included. A record that cannot be converted at all is not retried.
+ * included.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(KafkaConsumerProperties.class)
@@ -37,6 +42,7 @@ public class KafkaErrorHandlingConfiguration {
         DefaultErrorHandler handler = new DefaultErrorHandler(recoverer,
                 new FixedBackOff(properties.retryInterval().toMillis(), properties.retries()));
         handler.setBackOffFunction((record, exception) -> backOffFor(exception, properties));
+        handler.addNotRetryableExceptions(IllegalArgumentException.class);
         return handler;
     }
 

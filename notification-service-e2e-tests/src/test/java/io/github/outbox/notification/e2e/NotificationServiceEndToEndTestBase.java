@@ -39,7 +39,8 @@ abstract class NotificationServiceEndToEndTestBase {
         registry.add("spring.datasource.password", NotificationEndToEndContainers.POSTGRES::getPassword);
         registry.add("spring.kafka.bootstrap-servers", NotificationEndToEndContainers.KAFKA::getBootstrapServers);
         registry.add("app.kafka.order-events-topic", () -> TOPIC);
-        registry.add("app.kafka.retry-interval", () -> "200ms");
+        registry.add("app.kafka.retries", () -> "1");
+        registry.add("app.kafka.retry-interval", () -> "%dms".formatted(Waits.RETRY_INTERVAL.toMillis()));
         registry.add("app.kafka.transient-retry.initial-interval", () -> "200ms");
         registry.add("app.kafka.transient-retry.max-interval", () -> "1s");
     }

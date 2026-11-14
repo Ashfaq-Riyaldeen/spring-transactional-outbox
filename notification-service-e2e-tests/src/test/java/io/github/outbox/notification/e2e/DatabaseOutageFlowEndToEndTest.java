@@ -16,7 +16,7 @@ import static org.awaitility.Awaitility.await;
 
 class DatabaseOutageFlowEndToEndTest extends NotificationServiceEndToEndTestBase {
 
-    // Longer than the fixed retries (3 x 200 ms plus a connection timeout each) would take to give up.
+    // Longer than the fixed retries (one retry after 5 s, plus a connection timeout per attempt) take to give up.
     private static final Duration OUTAGE = Duration.ofSeconds(12);
 
     private final DatabaseOutage outage = new DatabaseOutage();

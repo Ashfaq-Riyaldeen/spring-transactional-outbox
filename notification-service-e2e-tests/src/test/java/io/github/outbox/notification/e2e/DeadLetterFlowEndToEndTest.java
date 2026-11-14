@@ -27,8 +27,8 @@ class DeadLetterFlowEndToEndTest extends NotificationServiceEndToEndTestBase {
     }
 
     @Test
-    @DisplayName("E2E dead letter when the event type is unknown should move the record to the dead letter topic")
-    void deadLetter_whenEventTypeIsUnknown_shouldMoveTheRecordToTheDeadLetterTopic() {
+    @DisplayName("E2E dead letter when the event type is unknown should move the record aside without retrying it")
+    void deadLetter_whenEventTypeIsUnknown_shouldMoveTheRecordAsideWithoutRetryingIt() {
         // given
         String marker = "unknown-type-" + UUID.randomUUID();
 
@@ -38,11 +38,13 @@ class DeadLetterFlowEndToEndTest extends NotificationServiceEndToEndTestBase {
 
         // then
         Waits.awaitDelivery().until(() -> deadLetters.containing(marker).size() == 1);
+        assertThat(deadLetters.delaysOf(marker)).singleElement()
+                .satisfies(delay -> assertThat(delay).isLessThan(Waits.RETRY_INTERVAL));
     }
 
     @Test
-    @DisplayName("E2E dead letter when the event id header is missing should move the record and notify nobody")
-    void deadLetter_whenEventIdHeaderIsMissing_shouldMoveTheRecordAndNotifyNobody() {
+    @DisplayName("E2E dead letter when the event id header is missing should move the record aside at once")
+    void deadLetter_whenEventIdHeaderIsMissing_shouldMoveTheRecordAsideAtOnceAndNotifyNobody() {
         // given
         long orderId = newOrderId();
         String correlationId = "missing-id-" + UUID.randomUUID();
@@ -53,6 +55,8 @@ class DeadLetterFlowEndToEndTest extends NotificationServiceEndToEndTestBase {
 
         // then
         Waits.awaitDelivery().until(() -> deadLetters.containing(correlationId).size() == 1);
+        assertThat(deadLetters.delaysOf(correlationId)).singleElement()
+                .satisfies(delay -> assertThat(delay).isLessThan(Waits.RETRY_INTERVAL));
         assertThat(api.findByOrderId(orderId).json()).isEmpty();
     }
 

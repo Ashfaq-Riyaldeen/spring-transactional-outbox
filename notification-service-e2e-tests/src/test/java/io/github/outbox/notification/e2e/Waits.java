@@ -11,6 +11,8 @@ import static org.awaitility.Awaitility.await;
  */
 final class Waits {
 
+    // Long enough that a record moved aside after a retry is told apart from one moved aside at once.
+    static final Duration RETRY_INTERVAL = Duration.ofSeconds(5);
     static final Duration DELIVERY = Duration.ofSeconds(30);
     static final Duration QUIET = Duration.ofSeconds(3);
     private static final Duration POLL_INTERVAL = Duration.ofMillis(200);
