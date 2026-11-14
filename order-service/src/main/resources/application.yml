@@ -25,6 +25,12 @@ spring:
       acks: all
       properties:
         enable.idempotence: true
+        # A send either completes or fails inside oncebox's emergency timeout, so an event marked failed is never
+        # delivered afterwards; a batch blocked on missing metadata (batch-size x max.block.ms) plus that timeout
+        # stays under the stuck threshold, so recovery never re-sends a batch that is still being sent.
+        max.block.ms: 2000
+        request.timeout.ms: 15000
+        delivery.timeout.ms: 60000
 
 app:
   kafka:
@@ -40,13 +46,14 @@ oncebox:
     sender:
       type: kafka
       bean-name: kafkaTemplate
+      emergency-timeout: 90s
     defaults:
       polling:
         initial-delay: 5s
     events:
       order-created:
         topic: ${app.kafka.order-events.name}
-        batch-size: 250
+        batch-size: 100
         polling:
           type: adaptive
           min-fixed-delay: 100ms
@@ -67,7 +74,7 @@ oncebox:
           delay: 5s
           multiplier: 3.0
     stuck-recovery:
-      max-batch-processing-time: 5m
+      max-batch-processing-time: 10m
       polling:
         initial-delay: 30s
     clean-up:
