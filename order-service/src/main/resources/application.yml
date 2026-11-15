@@ -88,6 +88,12 @@ oncebox:
       clean-up:
         ttl: 7d
 
+springdoc:
+  api-docs:
+    # OpenAPI 3.0 keeps nullable on fields such as cancelledAt, which 3.1 drops
+    version: openapi_3_0
+  default-produces-media-type: application/json
+
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful

@@ -1,9 +1,6 @@
 package io.github.outbox.order.api;
 
 import io.github.outbox.order.domain.OrderService;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,17 +17,17 @@ import java.net.URI;
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
-public class OrderController {
+public class OrderController implements OrderApi {
 
     static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
     private final OrderService service;
 
     @PostMapping
+    @Override
     public ResponseEntity<OrderResponse> create(
-            @RequestHeader(value = CORRELATION_ID_HEADER, required = false)
-            @Size(max = 128, message = "X-Correlation-Id must be at most {max} characters") String correlationId,
-            @RequestBody @Valid CreateOrderRequest request
+            @RequestHeader(value = CORRELATION_ID_HEADER, required = false) String correlationId,
+            @RequestBody CreateOrderRequest request
     ) {
         OrderResponse order = service.create(request, correlationId);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -41,16 +38,17 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/cancel")
+    @Override
     public OrderResponse cancel(
-            @RequestHeader(value = CORRELATION_ID_HEADER, required = false)
-            @Size(max = 128, message = "X-Correlation-Id must be at most {max} characters") String correlationId,
-            @PathVariable("id") @Positive(message = "id must be positive") Long id
+            @RequestHeader(value = CORRELATION_ID_HEADER, required = false) String correlationId,
+            @PathVariable("id") Long id
     ) {
         return service.cancel(id, correlationId);
     }
 
     @GetMapping("/{id}")
-    public OrderResponse get(@PathVariable("id") @Positive(message = "id must be positive") Long id) {
+    @Override
+    public OrderResponse get(@PathVariable("id") Long id) {
         return service.get(id);
     }
 }
