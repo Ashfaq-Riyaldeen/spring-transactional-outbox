@@ -21,7 +21,8 @@ public interface OrderApi {
                     description = "Order successfully created",
                     headers = @Header(name = "Location", description = "URI of the created order"),
                     content = @Content(schema = @Schema(implementation = OrderResponse.class))
-            )
+            ),
+            @ApiResponse(responseCode = "400", description = "Request validation failed")
     })
     ResponseEntity<OrderResponse> create(
             @Parameter(description = "Correlation id of the request, a new one is generated when absent")
@@ -50,7 +51,9 @@ public interface OrderApi {
                     responseCode = "200",
                     description = "Order successfully retrieved",
                     content = @Content(schema = @Schema(implementation = OrderResponse.class))
-            )
+            ),
+            @ApiResponse(responseCode = "400", description = "Request validation failed"),
+            @ApiResponse(responseCode = "404", description = "Order not found")
     })
     OrderResponse get(
             @Parameter(description = "Id of the order", required = true)
