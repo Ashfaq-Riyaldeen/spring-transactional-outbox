@@ -43,6 +43,10 @@
             <artifactId>bucket4j_jdk17-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.github.dmitriy-iliyov</groupId>
             <artifactId>oncebox-starter</artifactId>
         </dependency>

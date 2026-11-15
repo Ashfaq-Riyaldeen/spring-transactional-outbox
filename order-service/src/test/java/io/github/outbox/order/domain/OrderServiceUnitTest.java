@@ -8,6 +8,8 @@ import io.github.outbox.order.api.CreateOrderRequest;
 import io.github.outbox.order.api.OrderItemRequest;
 import io.github.outbox.order.api.OrderItemResponse;
 import io.github.outbox.order.api.OrderResponse;
+import io.github.outbox.order.ratelimit.OrderCreationRateLimiter;
+import io.github.outbox.order.ratelimit.RateLimitExceededException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -31,8 +34,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,11 +56,31 @@ class OrderServiceUnitTest {
     @Mock
     private OutboxPublisher outboxPublisher;
 
+    @Mock
+    private OrderCreationRateLimiter rateLimiter;
+
     private OrderService tested;
 
     @BeforeEach
     void setUp() {
-        tested = new OrderService(repository, cancellation, outboxPublisher, Clock.fixed(NOW, ZoneOffset.UTC));
+        tested = new OrderService(repository, cancellation, outboxPublisher, rateLimiter,
+                Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    @Test
+    @DisplayName("UT create() when the customer's rate limit is used up should refuse without storing or publishing")
+    void create_whenCustomerRateLimitIsUsedUp_shouldRefuseWithoutStoringOrPublishing() {
+        // given
+        CreateOrderRequest request = new CreateOrderRequest(42L, List.of(
+                new OrderItemRequest("sku-1", 1, new BigDecimal("10.50"))
+        ));
+        RateLimitExceededException refusal =
+                new RateLimitExceededException("Too many orders for customer 42, retry later", Duration.ofSeconds(6));
+        doThrow(refusal).when(rateLimiter).acquireForCustomer(42L);
+
+        // when / then
+        assertThatThrownBy(() -> tested.create(request, "c-1")).isSameAs(refusal);
+        verifyNoInteractions(repository, outboxPublisher);
     }
 
     @Test

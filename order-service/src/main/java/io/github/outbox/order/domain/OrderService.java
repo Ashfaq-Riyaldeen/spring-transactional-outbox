@@ -5,6 +5,8 @@ import io.github.outbox.contract.OrderCreatedEvent;
 import io.github.outbox.contract.OrderEventTypes;
 import io.github.outbox.order.api.CreateOrderRequest;
 import io.github.outbox.order.api.OrderResponse;
+import io.github.outbox.order.ratelimit.OrderCreationRateLimiter;
+import io.github.outbox.order.ratelimit.RateLimitExceededException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ public class OrderService {
     private final OrderRepository repository;
     private final OrderCancellation cancellation;
     private final OutboxPublisher outboxPublisher;
+    private final OrderCreationRateLimiter rateLimiter;
     private final Clock clock;
 
     /**
@@ -34,9 +37,11 @@ public class OrderService {
      * @param request       the order as the client sent it
      * @param correlationId correlation id of the request; a new one is generated when it is {@code null} or blank
      * @return the stored order
+     * @throws RateLimitExceededException when the customer has placed too many orders lately; nothing is stored
      */
     @Transactional
     public OrderResponse create(CreateOrderRequest request, String correlationId) {
+        rateLimiter.acquireForCustomer(request.customerId());
         List<OrderItem> items = request.items().stream()
                 .map(line -> new OrderItem(line.productId(), line.quantity(), line.price().setScale(2)))
                 .toList();

@@ -8,7 +8,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * Applies the order creation rate limits before {@code POST /api/v1/orders} reaches the controller. A refusal is
+ * Applies the global and the per-address order creation limits before {@code POST /api/v1/orders} reaches the
+ * controller; the per-customer limit needs the request body and is applied by the order service. A refusal is
  * thrown, so the advice answers it like every other failure of the API.
  */
 @RequiredArgsConstructor
@@ -19,7 +20,7 @@ public class OrderCreationRateLimitInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (HttpMethod.POST.matches(request.getMethod())) {
-            rateLimiter.acquire();
+            rateLimiter.acquire(request.getRemoteAddr());
         }
         return true;
     }

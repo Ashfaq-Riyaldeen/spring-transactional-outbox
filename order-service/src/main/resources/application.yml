@@ -43,6 +43,13 @@ app:
       global:
         capacity: ${ORDER_RATE_LIMIT_GLOBAL_CAPACITY:100}
         period: ${ORDER_RATE_LIMIT_GLOBAL_PERIOD:1s}
+      per-ip:
+        capacity: ${ORDER_RATE_LIMIT_PER_IP_CAPACITY:20}
+        period: ${ORDER_RATE_LIMIT_PER_IP_PERIOD:1s}
+      per-customer:
+        capacity: ${ORDER_RATE_LIMIT_PER_CUSTOMER_CAPACITY:10}
+        period: ${ORDER_RATE_LIMIT_PER_CUSTOMER_PERIOD:1m}
+      max-tracked-keys: 100000
 
 oncebox:
   # stuck recovery, cleanup and three DLQ jobs, plus one poller per event type

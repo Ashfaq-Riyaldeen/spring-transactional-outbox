@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -31,13 +32,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// The global order creation limit is set to two requests a minute, so the third one in a test is refused.
+// Limits of four orders a minute in total and two a minute per address; every test starts with full limits.
 @WebMvcTest(OrderController.class)
 @Import(ClockConfiguration.class)
 @TestPropertySource(properties = {
-        "app.rate-limit.order-creation.global.capacity=2",
-        "app.rate-limit.order-creation.global.period=1m"
+        "app.rate-limit.order-creation.global.capacity=4",
+        "app.rate-limit.order-creation.global.period=1m",
+        "app.rate-limit.order-creation.per-ip.capacity=2",
+        "app.rate-limit.order-creation.per-ip.period=1m"
 })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class OrderCreationRateLimitIntegrationTest {
 
     @Autowired
@@ -51,21 +55,42 @@ class OrderCreationRateLimitIntegrationTest {
     void create_whenGlobalLimitIsUsedUp_shouldAnswer429WithRetryAfterAsProblem() throws Exception {
         // given
         when(service.create(any(CreateOrderRequest.class), any())).thenReturn(order());
-        createOrder().andExpect(status().isCreated());
-        createOrder().andExpect(status().isCreated());
+        createOrderFrom("10.0.0.1").andExpect(status().isCreated());
+        createOrderFrom("10.0.0.1").andExpect(status().isCreated());
+        createOrderFrom("10.0.0.2").andExpect(status().isCreated());
+        createOrderFrom("10.0.0.2").andExpect(status().isCreated());
 
         // when
-        ResultActions refused = createOrder();
+        ResultActions refused = createOrderFrom("10.0.0.3");
 
         // then
         refused.andExpect(status().isTooManyRequests())
-                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "30"))
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "15"))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.type").value("https://spring-transactional-outbox/errors/rate-limit-exceeded"))
                 .andExpect(jsonPath("$.title").value("Rate limit exceeded"))
                 .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.detail").value("Too many orders are being created, retry later"))
                 .andExpect(jsonPath("$.path").value("/api/v1/orders"));
-        verify(service, times(2)).create(any(CreateOrderRequest.class), any());
+        verify(service, times(4)).create(any(CreateOrderRequest.class), any());
+    }
+
+    @Test
+    @DisplayName("IT create() when one address uses up its limit should answer it 429 and still serve another address")
+    void create_whenOneAddressUsesUpItsLimit_shouldAnswerIt429AndServeAnotherAddress() throws Exception {
+        // given
+        when(service.create(any(CreateOrderRequest.class), any())).thenReturn(order());
+        createOrderFrom("10.0.0.1").andExpect(status().isCreated());
+        createOrderFrom("10.0.0.1").andExpect(status().isCreated());
+
+        // when
+        ResultActions refused = createOrderFrom("10.0.0.1");
+
+        // then
+        refused.andExpect(status().isTooManyRequests())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "30"))
+                .andExpect(jsonPath("$.detail").value("Too many orders from this address, retry later"));
+        createOrderFrom("10.0.0.2").andExpect(status().isCreated());
     }
 
     @Test
@@ -80,8 +105,11 @@ class OrderCreationRateLimitIntegrationTest {
         }
     }
 
-    private ResultActions createOrder() throws Exception {
-        return mvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON).content("""
+    private ResultActions createOrderFrom(String clientIp) throws Exception {
+        return mvc.perform(post("/api/v1/orders").with(request -> {
+            request.setRemoteAddr(clientIp);
+            return request;
+        }).contentType(MediaType.APPLICATION_JSON).content("""
                 {"customerId": 42, "items": [{"productId": "sku-1", "quantity": 2, "price": 10.50}]}
                 """));
     }
