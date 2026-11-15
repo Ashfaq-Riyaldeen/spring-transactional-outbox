@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest a new feature or an improvement
+title: "Transactional Outbox - [Feature]: "
+labels: [ "enhancement" ]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What are you trying to do, and what makes it hard today?
+      placeholder: There is no way to see how many outbox events are waiting without querying the table...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work? Configuration, API or request examples are welcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you use now, or other approaches you thought about.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Primary component
+      options:
+        - order-service
+        - notification-service
+        - events-contract
+        - end-to-end tests
+        - build / CI
+        - documentation
+        - other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Willing to contribute
+      options:
+        - label: I am willing to open a pull request for this.

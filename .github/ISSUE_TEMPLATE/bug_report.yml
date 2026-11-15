@@ -1,0 +1,78 @@
+name: Bug report
+description: Something in the services, their tests or the build does not work as described
+title: "Transactional Outbox - [Bug]: "
+labels: [ "bug" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Security vulnerabilities must not be reported here, use **Report a vulnerability** on the Security tab instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What went wrong, and what did you expect to happen instead?
+      placeholder: A cancelled order's event reached notification-service twice and two notifications were stored...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps, requests or a failing test that shows the problem.
+      placeholder: |
+        1. Start PostgreSQL and Kafka as in the README quick start
+        2. mvn -pl order-service spring-boot:run
+        3. POST /api/v1/orders with ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - order-service
+        - notification-service
+        - events-contract
+        - end-to-end tests
+        - build / CI
+        - documentation
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag, or the commit of main you are on.
+      placeholder: main @ abc1234
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Java, Maven, Docker and OS versions.
+      placeholder: Java 21, Maven 3.9.9, Docker 27, macOS 15
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and stack traces
+      description: Relevant output, with secrets removed. It is rendered as code, no backticks needed.
+      render: text
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched the existing issues before opening this one.
+          required: true
