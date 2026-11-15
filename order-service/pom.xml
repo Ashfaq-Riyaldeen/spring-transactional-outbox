@@ -68,6 +68,10 @@
             <artifactId>oncebox-dlq-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.github.dmitriy-iliyov</groupId>
+            <artifactId>oncebox-metrics</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>

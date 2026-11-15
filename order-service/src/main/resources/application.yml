@@ -104,6 +104,13 @@ oncebox:
         initial-delay: 1m
       clean-up:
         ttl: 7d
+    metrics:
+      enabled: true
+      # outbox_events / outbox_dlq_events by status; counted in the database, cached so a scrape is not a query
+      gauge:
+        enabled: true
+        cache:
+          enabled: true
 
 springdoc:
   api-docs:

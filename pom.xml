@@ -71,6 +71,11 @@
                 <version>${oncebox.version}</version>
             </dependency>
             <dependency>
+                <groupId>io.github.dmitriy-iliyov</groupId>
+                <artifactId>oncebox-metrics</artifactId>
+                <version>${oncebox.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>

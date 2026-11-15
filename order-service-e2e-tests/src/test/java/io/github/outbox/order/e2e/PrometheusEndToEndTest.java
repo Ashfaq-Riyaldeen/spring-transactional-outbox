@@ -30,4 +30,22 @@ class PrometheusEndToEndTest extends OrderServiceEndToEndTestBase {
                         + "[^}]*status=\"201\"[^}]*uri=\"/api/v1/orders\"[^}]*} [1-9]");
         assertThat(metrics.body()).as("latency histogram buckets").contains("http_server_requests_seconds_bucket{");
     }
+
+    @Test
+    @DisplayName("E2E GET /actuator/prometheus when an event was published should expose the outbox metrics")
+    void prometheus_whenEventWasPublished_shouldExposeTheOutboxMetrics() {
+        // given
+        Response created = api.create(orderBody(newCustomerId()), null);
+        assertThat(created.status()).as(created.body()).isEqualTo(201);
+
+        // when / then
+        Waits.awaitDelivery().untilAsserted(() -> {
+            String scrape = api.metrics().body();
+            assertThat(scrape).as("events by status").containsPattern("(?m)^outbox_events_by_status\\{[^}]*status=");
+            assertThat(scrape).as("polling tasks that succeeded")
+                    .containsPattern("(?m)^oncebox_succeeded_tasks_total\\{[^}]*} [1-9]");
+            assertThat(scrape).as("time spent processing a batch")
+                    .containsPattern("(?m)^oncebox_task_processing_duration_seconds_count\\{");
+        });
+    }
 }
