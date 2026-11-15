@@ -48,6 +48,11 @@ final class OrderApi {
         return send(client.get().uri("/api/outbox-dlq/events/count").retrieve().toEntity(String.class));
     }
 
+    Response metrics() {
+        ResponseEntity<String> entity = client.get().uri("/actuator/prometheus").retrieve().toEntity(String.class);
+        return new Response(entity.getStatusCode().value(), entity.getHeaders(), null, entity.getBody());
+    }
+
     private Response send(ResponseEntity<String> entity) {
         try {
             JsonNode body = entity.getBody() == null ? null : mapper.readTree(entity.getBody());

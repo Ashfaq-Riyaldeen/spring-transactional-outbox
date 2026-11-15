@@ -2,6 +2,7 @@ package io.github.outbox.order.e2e;
 
 import io.github.outbox.order.OrderServiceApplication;
 import org.junit.jupiter.api.AfterEach;
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -15,6 +16,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * Postgres and Kafka. Nothing of the service is replaced; only the timings are shortened for a test run.
  */
 @SpringBootTest(classes = OrderServiceApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// Spring Boot turns metrics export off in tests; the service is started here as in production, metrics included.
+@AutoConfigureObservability
 @Testcontainers
 @RequiresDocker
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)

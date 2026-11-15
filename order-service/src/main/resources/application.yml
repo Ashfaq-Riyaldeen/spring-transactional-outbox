@@ -119,7 +119,14 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      # latency percentiles are computed in Prometheus from the histogram buckets
+      percentiles-histogram:
+        http.server.requests: true
   endpoint:
     health:
       probes:
