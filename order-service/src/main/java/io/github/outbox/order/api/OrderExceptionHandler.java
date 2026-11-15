@@ -3,6 +3,7 @@ package io.github.outbox.order.api;
 import io.github.outbox.order.api.OrderProblems.FieldViolation;
 import io.github.outbox.order.domain.OrderAlreadyCancelledException;
 import io.github.outbox.order.domain.OrderNotFoundException;
+import io.github.outbox.order.ratelimit.RateLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,17 @@ public class OrderExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problem = OrderProblems.orderAlreadyCancelled(exception.getMessage(), request.getRequestURI(),
                 clock.instant());
         return ResponseEntity.status(problem.getStatus()).body(problem);
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ProblemDetail> handleRateLimitExceededException(RateLimitExceededException exception,
+                                                                          HttpServletRequest request) {
+        log.debug("Request {} answered 429: {}", request.getRequestURI(), exception.getMessage());
+        ProblemDetail problem = OrderProblems.rateLimitExceeded(exception.getMessage(), request.getRequestURI(),
+                clock.instant());
+        return ResponseEntity.status(problem.getStatus())
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.retryAfter().toSeconds()))
+                .body(problem);
     }
 
     @ExceptionHandler(Exception.class)

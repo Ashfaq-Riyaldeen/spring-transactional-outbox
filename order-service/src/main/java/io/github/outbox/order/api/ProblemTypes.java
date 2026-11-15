@@ -13,6 +13,7 @@ public final class ProblemTypes {
     public static final URI VALIDATION_FAILED = URI.create(BASE + "validation-failed");
     public static final URI ORDER_NOT_FOUND = URI.create(BASE + "order-not-found");
     public static final URI ORDER_ALREADY_CANCELLED = URI.create(BASE + "order-already-cancelled");
+    public static final URI RATE_LIMIT_EXCEEDED = URI.create(BASE + "rate-limit-exceeded");
     public static final URI INTERNAL_ERROR = URI.create(BASE + "internal-error");
 
     private ProblemTypes() {

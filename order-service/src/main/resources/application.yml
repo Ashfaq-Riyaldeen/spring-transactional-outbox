@@ -38,6 +38,11 @@ app:
       name: ${ORDER_EVENTS_TOPIC:order-events}
       partitions: ${ORDER_EVENTS_PARTITIONS:3}
       replicas: ${ORDER_EVENTS_REPLICAS:1}
+  rate-limit:
+    order-creation:
+      global:
+        capacity: ${ORDER_RATE_LIMIT_GLOBAL_CAPACITY:100}
+        period: ${ORDER_RATE_LIMIT_GLOBAL_PERIOD:1s}
 
 oncebox:
   # stuck recovery, cleanup and three DLQ jobs, plus one poller per event type

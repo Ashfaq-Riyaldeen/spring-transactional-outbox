@@ -35,6 +35,11 @@ final class OrderProblems {
                 instance, timestamp);
     }
 
+    static ProblemDetail rateLimitExceeded(String detail, String instance, Instant timestamp) {
+        return problem(HttpStatus.TOO_MANY_REQUESTS, ProblemTypes.RATE_LIMIT_EXCEEDED, "Rate limit exceeded", detail,
+                instance, timestamp);
+    }
+
     static ProblemDetail internalError(String instance, Instant timestamp) {
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, ProblemTypes.INTERNAL_ERROR, "Internal error",
                 INTERNAL_ERROR_DETAIL, instance, timestamp);
