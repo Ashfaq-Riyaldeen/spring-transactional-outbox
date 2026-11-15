@@ -1,5 +1,6 @@
 package io.github.outbox.order.bulkhead;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,8 @@ class OrderCreationBulkheadMultiThreadTest {
     @DisplayName("MT acquire() when two holders keep both slots should refuse a third caller until one of them leaves")
     void acquire_whenTwoHoldersKeepBothSlots_shouldRefuseThirdCallerUntilOneLeaves() throws Exception {
         // given
-        OrderCreationBulkhead tested = new OrderCreationBulkhead(new BulkheadProperties(2, Duration.ZERO));
+        OrderCreationBulkhead tested =
+                new OrderCreationBulkhead(new BulkheadProperties(2, Duration.ZERO), new SimpleMeterRegistry());
         CountDownLatch holding = new CountDownLatch(2);
         CountDownLatch leave = new CountDownLatch(1);
         try (ExecutorService pool = Executors.newFixedThreadPool(2,
@@ -64,8 +66,8 @@ class OrderCreationBulkheadMultiThreadTest {
         // given
         int threads = 24;
         int limit = 4;
-        OrderCreationBulkhead tested =
-                new OrderCreationBulkhead(new BulkheadProperties(limit, Duration.ofSeconds(10)));
+        BulkheadProperties properties = new BulkheadProperties(limit, Duration.ofSeconds(10));
+        OrderCreationBulkhead tested = new OrderCreationBulkhead(properties, new SimpleMeterRegistry());
         AtomicInteger inside = new AtomicInteger();
         AtomicInteger mostInside = new AtomicInteger();
         AtomicInteger completed = new AtomicInteger();

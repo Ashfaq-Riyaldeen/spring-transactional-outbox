@@ -3,6 +3,9 @@ package io.github.outbox.order.config;
 import io.github.outbox.order.api.OrderCreationBulkheadInterceptor;
 import io.github.outbox.order.bulkhead.BulkheadProperties;
 import io.github.outbox.order.bulkhead.OrderCreationBulkhead;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,8 +21,9 @@ public class BulkheadConfiguration implements WebMvcConfigurer {
 
     private final OrderCreationBulkhead bulkhead;
 
-    public BulkheadConfiguration(BulkheadProperties properties) {
-        this.bulkhead = new OrderCreationBulkhead(properties);
+    // A test slice without metrics gets a registry of its own, so the counters are always there to increment.
+    public BulkheadConfiguration(BulkheadProperties properties, ObjectProvider<MeterRegistry> meterRegistry) {
+        this.bulkhead = new OrderCreationBulkhead(properties, meterRegistry.getIfAvailable(SimpleMeterRegistry::new));
     }
 
     @Bean

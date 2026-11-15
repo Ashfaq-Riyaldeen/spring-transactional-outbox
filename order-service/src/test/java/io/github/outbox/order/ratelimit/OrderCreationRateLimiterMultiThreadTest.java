@@ -1,6 +1,7 @@
 package io.github.outbox.order.ratelimit;
 
 import io.github.bucket4j.TimeMeter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Timeout;
@@ -105,7 +106,7 @@ class OrderCreationRateLimiterMultiThreadTest {
     private static OrderCreationRateLimiter limiter(RateLimitProperties.Limit global, RateLimitProperties.Limit perIp,
                                                     RateLimitProperties.Limit perCustomer) {
         return new OrderCreationRateLimiter(new RateLimitProperties(global, perIp, perCustomer, 100),
-                new FrozenTimeMeter());
+                new SimpleMeterRegistry(), new FrozenTimeMeter());
     }
 
     private static RateLimitProperties.Limit limit(long capacity) {

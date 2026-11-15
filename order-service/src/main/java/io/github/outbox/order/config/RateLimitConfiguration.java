@@ -3,6 +3,9 @@ package io.github.outbox.order.config;
 import io.github.outbox.order.api.OrderCreationRateLimitInterceptor;
 import io.github.outbox.order.ratelimit.OrderCreationRateLimiter;
 import io.github.outbox.order.ratelimit.RateLimitProperties;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,8 +20,10 @@ public class RateLimitConfiguration implements WebMvcConfigurer {
 
     private final OrderCreationRateLimiter rateLimiter;
 
-    public RateLimitConfiguration(RateLimitProperties properties) {
-        this.rateLimiter = new OrderCreationRateLimiter(properties);
+    // A test slice without metrics gets a registry of its own, so the counters are always there to increment.
+    public RateLimitConfiguration(RateLimitProperties properties,
+                                  ObjectProvider<MeterRegistry> meterRegistry) {
+        this.rateLimiter = new OrderCreationRateLimiter(properties, meterRegistry.getIfAvailable(SimpleMeterRegistry::new));
     }
 
     @Bean

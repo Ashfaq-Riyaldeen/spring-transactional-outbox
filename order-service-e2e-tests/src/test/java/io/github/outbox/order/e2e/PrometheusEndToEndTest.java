@@ -29,6 +29,11 @@ class PrometheusEndToEndTest extends OrderServiceEndToEndTestBase {
                 "http_server_requests_seconds_count\\{[^}]*application=\"order-service\"[^}]*method=\"POST\""
                         + "[^}]*status=\"201\"[^}]*uri=\"/api/v1/orders\"[^}]*} [1-9]");
         assertThat(metrics.body()).as("latency histogram buckets").contains("http_server_requests_seconds_bucket{");
+        assertThat(metrics.body()).as("refusals counted per reason, zero until one happens")
+                .containsPattern("orders_creation_rejected_total\\{[^}]*reason=\"global\"")
+                .containsPattern("orders_creation_rejected_total\\{[^}]*reason=\"per_ip\"")
+                .containsPattern("orders_creation_rejected_total\\{[^}]*reason=\"per_customer\"")
+                .containsPattern("orders_creation_rejected_total\\{[^}]*reason=\"bulkhead\"");
     }
 
     @Test

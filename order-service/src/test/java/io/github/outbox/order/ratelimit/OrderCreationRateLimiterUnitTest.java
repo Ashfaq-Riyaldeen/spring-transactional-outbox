@@ -1,6 +1,8 @@
 package io.github.outbox.order.ratelimit;
 
 import io.github.bucket4j.TimeMeter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -88,6 +90,42 @@ class OrderCreationRateLimiterUnitTest {
     }
 
     @Test
+    @DisplayName("UT acquire() when limits refuse requests should count each refusal under the limit that refused it")
+    void acquire_whenLimitsRefuseRequests_shouldCountEachRefusalUnderTheLimit() {
+        // given
+        MeterRegistry registry = new SimpleMeterRegistry();
+        OrderCreationRateLimiter tested = new OrderCreationRateLimiter(
+                properties(limit(1), limit(1), limit(1)), registry, new TestTimeMeter());
+        tested.acquire("10.0.0.1");
+        tested.acquireForCustomer(42);
+
+        // when
+        assertThatThrownBy(() -> tested.acquire("10.0.0.1")).isInstanceOf(RateLimitExceededException.class);
+        assertThatThrownBy(() -> tested.acquire("10.0.0.2")).isInstanceOf(RateLimitExceededException.class);
+        assertThatThrownBy(() -> tested.acquireForCustomer(42)).isInstanceOf(RateLimitExceededException.class);
+
+        // then
+        assertThat(rejected(registry, "per_ip")).isEqualTo(1);
+        assertThat(rejected(registry, "global")).isEqualTo(1);
+        assertThat(rejected(registry, "per_customer")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("UT constructor() should register a zero counter for every limit")
+    void constructor_whenCreated_shouldRegisterZeroCounterForEveryLimit() {
+        // given
+        MeterRegistry registry = new SimpleMeterRegistry();
+
+        // when
+        new OrderCreationRateLimiter(properties(ROOMY, ROOMY, ROOMY), registry, new TestTimeMeter());
+
+        // then
+        assertThat(rejected(registry, "global")).isZero();
+        assertThat(rejected(registry, "per_ip")).isZero();
+        assertThat(rejected(registry, "per_customer")).isZero();
+    }
+
+    @Test
     @DisplayName("UT acquire() when the wait is shorter than a second should ask to retry after one second")
     void acquire_whenWaitIsShorterThanSecond_shouldAskToRetryAfterOneSecond() {
         // given
@@ -108,7 +146,8 @@ class OrderCreationRateLimiterUnitTest {
     void acquire_whenPeriodHasPassedAfterRefusal_shouldLetRequestThroughAgain() {
         // given
         TestTimeMeter time = new TestTimeMeter();
-        OrderCreationRateLimiter tested = new OrderCreationRateLimiter(properties(limit(1), ROOMY, ROOMY), time);
+        OrderCreationRateLimiter tested =
+                new OrderCreationRateLimiter(properties(limit(1), ROOMY, ROOMY), new SimpleMeterRegistry(), time);
         tested.acquire("10.0.0.1");
         assertThatThrownBy(() -> tested.acquire("10.0.0.1")).isInstanceOf(RateLimitExceededException.class);
 
@@ -121,12 +160,17 @@ class OrderCreationRateLimiterUnitTest {
 
     private static OrderCreationRateLimiter limiter(RateLimitProperties.Limit global, RateLimitProperties.Limit perIp,
                                                     RateLimitProperties.Limit perCustomer) {
-        return new OrderCreationRateLimiter(properties(global, perIp, perCustomer), new TestTimeMeter());
+        return new OrderCreationRateLimiter(properties(global, perIp, perCustomer), new SimpleMeterRegistry(),
+                new TestTimeMeter());
     }
 
     private static RateLimitProperties properties(RateLimitProperties.Limit global, RateLimitProperties.Limit perIp,
                                                   RateLimitProperties.Limit perCustomer) {
         return new RateLimitProperties(global, perIp, perCustomer, 100);
+    }
+
+    private static double rejected(MeterRegistry registry, String reason) {
+        return registry.get(OrderCreationRateLimiter.REJECTED_METRIC).tag("reason", reason).counter().count();
     }
 
     // A limit of the given capacity per minute.
