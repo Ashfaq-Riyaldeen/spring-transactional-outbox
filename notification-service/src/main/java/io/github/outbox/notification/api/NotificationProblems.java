@@ -1,5 +1,6 @@
 package io.github.outbox.notification.api;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 
@@ -47,6 +48,23 @@ final class NotificationProblems {
     /**
      * One rejected value of a request: {@code field} is the name in the JSON body or the parameter name.
      */
-    record FieldViolation(String field, String message) {
+    @Schema(description = "Rejected value of a request")
+    record FieldViolation(
+
+            @Schema(
+                    description = "Name of the rejected value: its path in the JSON body, or the header, path "
+                            + "variable or query parameter name",
+                    example = "orderId",
+                    requiredMode = Schema.RequiredMode.REQUIRED
+            )
+            String field,
+
+            @Schema(
+                    description = "Why the value was rejected",
+                    example = "orderId must be positive",
+                    requiredMode = Schema.RequiredMode.REQUIRED
+            )
+            String message
+    ) {
     }
 }

@@ -3,6 +3,7 @@ package io.github.outbox.notification.api;
 import io.github.outbox.notification.notification.Notification;
 import io.github.outbox.notification.notification.NotificationChannel;
 import io.github.outbox.notification.notification.NotificationType;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -18,13 +19,36 @@ import java.util.UUID;
  * @param channel    where it was delivered
  * @param createdAt  the moment it was stored
  */
-public record NotificationResponse(long id,
-                                   UUID eventId,
-                                   long orderId,
-                                   long customerId,
-                                   NotificationType type,
-                                   NotificationChannel channel,
-                                   Instant createdAt) {
+@Schema(description = "Notification sent for an order event")
+public record NotificationResponse(
+
+        @Schema(description = "Id of the notification", requiredMode = Schema.RequiredMode.REQUIRED)
+        long id,
+
+        @Schema(
+                description = "Id of the order event the notification was sent for",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
+        UUID eventId,
+
+        @Schema(description = "Id of the order the notification is about", requiredMode = Schema.RequiredMode.REQUIRED)
+        long orderId,
+
+        @Schema(
+                description = "Id of the customer the notification was sent to",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
+        long customerId,
+
+        @Schema(description = "What happened to the order", requiredMode = Schema.RequiredMode.REQUIRED)
+        NotificationType type,
+
+        @Schema(description = "Where the notification was delivered", requiredMode = Schema.RequiredMode.REQUIRED)
+        NotificationChannel channel,
+
+        @Schema(description = "Moment the notification was stored", requiredMode = Schema.RequiredMode.REQUIRED)
+        Instant createdAt
+) {
 
     public static NotificationResponse from(Notification notification) {
         return new NotificationResponse(
