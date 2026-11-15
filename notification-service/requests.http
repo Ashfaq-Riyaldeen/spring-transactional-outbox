@@ -1,0 +1,17 @@
+# Requests against a locally started notification service (README, quick start).
+# Create an order first with order-service/requests.http; its notifications arrive within a moment.
+
+@host = http://localhost:8081
+@orderId = 1
+
+### Notifications stored for an order
+GET {{host}}/api/v1/notifications?orderId={{orderId}}
+
+### An invalid order id - 400
+GET {{host}}/api/v1/notifications?orderId=0
+
+### The OpenAPI document (Swagger UI: {{host}}/swagger-ui.html)
+GET {{host}}/v3/api-docs
+
+### Health
+GET {{host}}/actuator/health
