@@ -13,6 +13,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @EnableConfigurationProperties(RateLimitProperties.class)
 public class RateLimitConfiguration implements WebMvcConfigurer {
 
+    static final int INTERCEPTOR_ORDER = 0;
+
     private final OrderCreationRateLimiter rateLimiter;
 
     public RateLimitConfiguration(RateLimitProperties properties) {
@@ -26,6 +28,8 @@ public class RateLimitConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new OrderCreationRateLimitInterceptor(rateLimiter)).addPathPatterns("/api/v1/orders");
+        registry.addInterceptor(new OrderCreationRateLimitInterceptor(rateLimiter))
+                .addPathPatterns("/api/v1/orders")
+                .order(INTERCEPTOR_ORDER);
     }
 }

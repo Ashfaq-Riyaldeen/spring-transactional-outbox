@@ -1,6 +1,7 @@
 package io.github.outbox.order.api;
 
 import io.github.outbox.order.api.OrderProblems.FieldViolation;
+import io.github.outbox.order.bulkhead.BulkheadFullException;
 import io.github.outbox.order.domain.OrderAlreadyCancelledException;
 import io.github.outbox.order.domain.OrderNotFoundException;
 import io.github.outbox.order.ratelimit.RateLimitExceededException;
@@ -69,6 +70,17 @@ public class OrderExceptionHandler extends ResponseEntityExceptionHandler {
                                                                           HttpServletRequest request) {
         log.debug("Request {} answered 429: {}", request.getRequestURI(), exception.getMessage());
         ProblemDetail problem = OrderProblems.rateLimitExceeded(exception.getMessage(), request.getRequestURI(),
+                clock.instant());
+        return ResponseEntity.status(problem.getStatus())
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.retryAfter().toSeconds()))
+                .body(problem);
+    }
+
+    @ExceptionHandler(BulkheadFullException.class)
+    public ResponseEntity<ProblemDetail> handleBulkheadFullException(BulkheadFullException exception,
+                                                                     HttpServletRequest request) {
+        log.debug("Request {} answered 503: {}", request.getRequestURI(), exception.getMessage());
+        ProblemDetail problem = OrderProblems.serviceBusy(exception.getMessage(), request.getRequestURI(),
                 clock.instant());
         return ResponseEntity.status(problem.getStatus())
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.retryAfter().toSeconds()))

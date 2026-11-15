@@ -50,6 +50,11 @@ app:
         capacity: ${ORDER_RATE_LIMIT_PER_CUSTOMER_CAPACITY:10}
         period: ${ORDER_RATE_LIMIT_PER_CUSTOMER_PERIOD:1m}
       max-tracked-keys: 100000
+  bulkhead:
+    order-creation:
+      # at most as many orders created at once as there are database connections
+      max-concurrent: ${ORDER_BULKHEAD_MAX_CONCURRENT:20}
+      max-wait: ${ORDER_BULKHEAD_MAX_WAIT:100ms}
 
 oncebox:
   # stuck recovery, cleanup and three DLQ jobs, plus one poller per event type

@@ -40,6 +40,11 @@ final class OrderProblems {
                 instance, timestamp);
     }
 
+    static ProblemDetail serviceBusy(String detail, String instance, Instant timestamp) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, ProblemTypes.SERVICE_BUSY, "Service busy", detail, instance,
+                timestamp);
+    }
+
     static ProblemDetail internalError(String instance, Instant timestamp) {
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, ProblemTypes.INTERNAL_ERROR, "Internal error",
                 INTERNAL_ERROR_DETAIL, instance, timestamp);
