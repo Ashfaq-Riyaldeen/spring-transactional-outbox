@@ -32,6 +32,16 @@ final class OrderApi {
                 .toEntity(String.class));
     }
 
+    Response createTraced(String body, String traceParent) {
+        return send(client.post()
+                .uri("/api/v1/orders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("traceparent", traceParent)
+                .body(body)
+                .retrieve()
+                .toEntity(String.class));
+    }
+
     Response get(long id) {
         return send(client.get().uri("/api/v1/orders/{id}", id).retrieve().toEntity(String.class));
     }

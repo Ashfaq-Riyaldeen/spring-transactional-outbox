@@ -135,6 +135,11 @@ management:
       # latency percentiles are computed in Prometheus from the histogram buckets
       percentiles-histogram:
         http.server.requests: true
+  # Spans are exported over OTLP once MANAGEMENT_OTLP_TRACING_ENDPOINT points at a collector; without it the trace
+  # and span ids still reach the logs
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
   endpoint:
     health:
       show-components: always

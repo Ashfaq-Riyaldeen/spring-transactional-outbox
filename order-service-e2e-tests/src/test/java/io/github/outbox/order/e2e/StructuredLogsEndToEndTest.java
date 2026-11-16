@@ -48,6 +48,25 @@ class StructuredLogsEndToEndTest extends OrderServiceEndToEndTestBase {
         assertThat(line.get("orderId").asText()).isEqualTo(created.json().get("id").asText());
     }
 
+    @Test
+    @DisplayName("E2E logs when a traced request creates an order should log it under the caller's trace id")
+    void logs_whenTracedRequestCreatesOrder_shouldLogItUnderTheCallersTraceId(CapturedOutput output) {
+        // given
+        String traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+
+        // when
+        Response created = api.createTraced(orderBody(newCustomerId()), "00-" + traceId + "-00f067aa0ba902b7-01");
+
+        // then
+        assertThat(created.status()).as(created.body()).isEqualTo(201);
+        String expected = "Order created orderId=" + created.json().get("id").asLong() + " ";
+        JsonNode line = Waits.awaitDelivery()
+                .until(() -> logLine(output, expected), Optional::isPresent)
+                .orElseThrow();
+        assertThat(line.get("traceId").asText()).isEqualTo(traceId);
+        assertThat(line.get("spanId").asText()).hasSize(16).isNotEqualTo("00f067aa0ba902b7");
+    }
+
     private Optional<JsonNode> logLine(CapturedOutput output, String messagePrefix) {
         return output.getOut().lines()
                 .filter(text -> text.startsWith("{") && text.contains(messagePrefix))
