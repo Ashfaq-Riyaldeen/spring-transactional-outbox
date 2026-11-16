@@ -75,6 +75,7 @@ class DeadLetterFlowEndToEndTest extends NotificationServiceEndToEndTestBase {
 
         // then
         Waits.awaitDelivery().until(() -> api.findByOrderId(orderId).json().size() == 1);
-        assertThat(deadLetters.containing(marker)).hasSize(1);
+        // without a key the two records may sit on different partitions, so the good one can be handled first
+        Waits.awaitDelivery().until(() -> deadLetters.containing(marker).size() == 1);
     }
 }
