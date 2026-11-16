@@ -24,6 +24,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -61,9 +62,9 @@ class OrderControllerIntegrationTest {
                 .andExpect(jsonPath("$.id").value(7))
                 .andExpect(jsonPath("$.status").value("CREATED"))
                 .andExpect(jsonPath("$.items[0].productId").value("sku-1"));
-        verify(service).create(new CreateOrderRequest(42L, List.of(
+        verify(service).create(eq(new CreateOrderRequest(42L, List.of(
                 new OrderItemRequest("sku-1", 2, new BigDecimal("10.50"))
-        )), null);
+        ))), notNull());
     }
 
     @Test

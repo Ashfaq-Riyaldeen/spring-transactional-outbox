@@ -10,6 +10,7 @@ import io.github.outbox.order.api.OrderItemResponse;
 import io.github.outbox.order.api.OrderResponse;
 import io.github.outbox.order.ratelimit.OrderCreationRateLimiter;
 import io.github.outbox.order.ratelimit.RateLimitExceededException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -65,6 +67,11 @@ class OrderServiceUnitTest {
     void setUp() {
         tested = new OrderService(repository, cancellation, outboxPublisher, rateLimiter,
                 Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    @AfterEach
+    void clearMdc() {
+        MDC.clear();
     }
 
     @Test
@@ -192,6 +199,39 @@ class OrderServiceUnitTest {
         verify(outboxPublisher).publish(eq(OrderEventTypes.ORDER_CREATED), event.capture());
         assertThat(event.getValue().correlationId()).isNotBlank();
         assertThat(UUID.fromString(event.getValue().correlationId())).isNotNull();
+    }
+
+    @Test
+    @DisplayName("UT create() when the order is stored should name its customer and id in the MDC")
+    void create_whenOrderIsStored_shouldNameItsCustomerAndIdInMdc() {
+        // given
+        CreateOrderRequest request = new CreateOrderRequest(42L, List.of(
+                new OrderItemRequest("sku-1", 1, new BigDecimal("10.50"))
+        ));
+        givenRepositoryStoresUnderId(7L);
+
+        // when
+        tested.create(request, "c-1");
+
+        // then
+        assertThat(MDC.get(OrderService.MDC_CUSTOMER_ID)).isEqualTo("42");
+        assertThat(MDC.get(OrderService.MDC_ORDER_ID)).isEqualTo("7");
+    }
+
+    @Test
+    @DisplayName("UT cancel() when the order is cancelled should name it and its customer in the MDC")
+    void cancel_whenOrderIsCancelled_shouldNameItAndItsCustomerInMdc() {
+        // given
+        Order cancelled = new Order(7L, 42L, OrderStatus.CANCELLED, BigDecimal.ONE, NOW_IN_MICROS, NOW_IN_MICROS,
+                List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)));
+        when(cancellation.cancel(7L, "c-1")).thenReturn(cancelled);
+
+        // when
+        tested.cancel(7L, "c-1");
+
+        // then
+        assertThat(MDC.get(OrderService.MDC_ORDER_ID)).isEqualTo("7");
+        assertThat(MDC.get(OrderService.MDC_CUSTOMER_ID)).isEqualTo("42");
     }
 
     @Test

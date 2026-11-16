@@ -9,6 +9,7 @@ import io.github.outbox.order.ratelimit.OrderCreationRateLimiter;
 import io.github.outbox.order.ratelimit.RateLimitExceededException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,13 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class OrderService {
+
+    /**
+     * MDC keys of the order a request works on. They stay set until the request ends, so that everything logged
+     * after the service returns - by the advice, say - names the order too; the request's filter clears them.
+     */
+    public static final String MDC_ORDER_ID = "orderId";
+    public static final String MDC_CUSTOMER_ID = "customerId";
 
     private final OrderRepository repository;
     private final OrderCancellation cancellation;
@@ -41,6 +49,7 @@ public class OrderService {
      */
     @Transactional
     public OrderResponse create(CreateOrderRequest request, String correlationId) {
+        MDC.put(MDC_CUSTOMER_ID, String.valueOf(request.customerId()));
         rateLimiter.acquireForCustomer(request.customerId());
         List<OrderItem> items = request.items().stream()
                 .map(line -> new OrderItem(line.productId(), line.quantity(), line.price().setScale(2)))
@@ -50,6 +59,7 @@ public class OrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         Order order = repository.save(request.customerId(), items, total, now());
         outboxPublisher.publish(OrderEventTypes.ORDER_CREATED, order.createdEvent(correlationIdOrNew(correlationId)));
+        MDC.put(MDC_ORDER_ID, String.valueOf(order.id()));
         log.info("Order created orderId={} customerId={} total={}", order.id(), order.customerId(), order.total());
         return OrderResponse.from(order);
     }
@@ -66,7 +76,9 @@ public class OrderService {
      */
     @Transactional
     public OrderResponse cancel(long id, String correlationId) {
+        MDC.put(MDC_ORDER_ID, String.valueOf(id));
         Order order = cancellation.cancel(id, correlationIdOrNew(correlationId));
+        MDC.put(MDC_CUSTOMER_ID, String.valueOf(order.customerId()));
         log.info("Order cancelled orderId={} customerId={}", order.id(), order.customerId());
         return OrderResponse.from(order);
     }

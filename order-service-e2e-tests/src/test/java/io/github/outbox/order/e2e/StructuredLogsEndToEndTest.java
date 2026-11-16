@@ -24,10 +24,11 @@ class StructuredLogsEndToEndTest extends OrderServiceEndToEndTestBase {
     }
 
     @Test
-    @DisplayName("E2E logs when an order is created should write its log line as one JSON object")
-    void logs_whenOrderIsCreated_shouldWriteItsLogLineAsOneJsonObject(CapturedOutput output) {
+    @DisplayName("E2E logs when an order is created should write its line as JSON with the request context")
+    void logs_whenOrderIsCreated_shouldWriteItsLineAsJsonWithRequestContext(CapturedOutput output) {
         // given
-        Response created = api.create(orderBody(newCustomerId()), null);
+        long customerId = newCustomerId();
+        Response created = api.create(orderBody(customerId), "e2e-logs-1");
         assertThat(created.status()).as(created.body()).isEqualTo(201);
         String expected = "Order created orderId=" + created.json().get("id").asLong() + " ";
 
@@ -42,6 +43,9 @@ class StructuredLogsEndToEndTest extends OrderServiceEndToEndTestBase {
         assertThat(line.get("logger_name").asText()).isEqualTo("io.github.outbox.order.domain.OrderService");
         assertThat(line.hasNonNull("@timestamp")).as(line.toString()).isTrue();
         assertThat(line.hasNonNull("thread_name")).as(line.toString()).isTrue();
+        assertThat(line.get("correlationId").asText()).isEqualTo("e2e-logs-1");
+        assertThat(line.get("customerId").asText()).isEqualTo(String.valueOf(customerId));
+        assertThat(line.get("orderId").asText()).isEqualTo(created.json().get("id").asText());
     }
 
     private Optional<JsonNode> logLine(CapturedOutput output, String messagePrefix) {

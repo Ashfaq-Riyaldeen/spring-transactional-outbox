@@ -19,7 +19,7 @@ import java.net.URI;
 @RequiredArgsConstructor
 public class OrderController implements OrderApi {
 
-    static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
+    public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
     private final OrderService service;
 
