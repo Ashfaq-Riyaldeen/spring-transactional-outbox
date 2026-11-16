@@ -38,6 +38,7 @@ app:
       name: ${ORDER_EVENTS_TOPIC:order-events}
       partitions: ${ORDER_EVENTS_PARTITIONS:3}
       replicas: ${ORDER_EVENTS_REPLICAS:1}
+    health-timeout: 3s
   rate-limit:
     order-creation:
       global:
@@ -136,5 +137,11 @@ management:
         http.server.requests: true
   endpoint:
     health:
+      show-components: always
       probes:
         enabled: true
+      group:
+        # Kafka is reported, but not part of readiness: orders are still accepted while it is away, the outbox keeps
+        # their events until it is back
+        readiness:
+          include: readinessState,db
