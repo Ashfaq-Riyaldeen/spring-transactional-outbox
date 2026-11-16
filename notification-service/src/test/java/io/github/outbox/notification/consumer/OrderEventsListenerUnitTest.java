@@ -11,19 +11,25 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OrderEventsListenerUnitTest {
@@ -66,6 +72,27 @@ class OrderEventsListenerUnitTest {
 
         // then
         verifyNoInteractions(notificationService);
+    }
+
+    @Test
+    @DisplayName("UT onOrderEvent() when the event is handled should name it in the log context and clear it after")
+    void onOrderEvent_whenEventIsHandled_shouldNameItInLogContextAndClearItAfter() {
+        // given
+        Map<String, String> duringNotification = new HashMap<>();
+        when(notificationService.notify(eq(EVENT_ID), any())).thenAnswer(invocation -> {
+            duringNotification.putAll(MDC.getCopyOfContextMap());
+            return null;
+        });
+
+        // when
+        tested.onOrderEvent(message(EVENT_ID));
+
+        // then
+        assertThat(duringNotification)
+                .containsEntry("eventId", EVENT_ID.toString())
+                .containsEntry("orderId", "7")
+                .containsEntry("customerId", "42");
+        assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
     }
 
     private static Message<OrderEvent> message(UUID eventId) {

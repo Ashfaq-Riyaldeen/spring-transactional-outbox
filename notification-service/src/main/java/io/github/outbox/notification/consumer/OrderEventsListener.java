@@ -30,10 +30,13 @@ public class OrderEventsListener {
             containerFactory = "inboxKafkaListenerContainerFactory"
     )
     public void onOrderEvent(Message<OrderEvent> message) {
-        idempotentConsumer.consume(
-                message,
-                OnceboxHeadersUtils::extractId,
-                consumed -> notificationService.notify(OnceboxHeadersUtils.extractId(consumed), consumed.getPayload())
-        );
+        try (ConsumerLogContext ignored = ConsumerLogContext.of(message)) {
+            idempotentConsumer.consume(
+                    message,
+                    OnceboxHeadersUtils::extractId,
+                    consumed -> notificationService.notify(OnceboxHeadersUtils.extractId(consumed),
+                            consumed.getPayload())
+            );
+        }
     }
 }

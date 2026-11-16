@@ -211,7 +211,7 @@ the outbox and inbox tables are created by oncebox on startup, and the topics by
 mvn clean install -DskipTests
 
 mvn -pl order-service spring-boot:run -Dspring-boot.run.profiles=local
-DB_PORT=5433 mvn -pl notification-service spring-boot:run
+DB_PORT=5433 mvn -pl notification-service spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 | | URL |
