@@ -32,6 +32,15 @@ final class NotificationApi {
         }
     }
 
+    Response health(String path) {
+        ResponseEntity<String> entity = client.get().uri("/actuator/health" + path).retrieve().toEntity(String.class);
+        try {
+            return new Response(entity.getStatusCode().value(), mapper.readTree(entity.getBody()), entity.getBody());
+        } catch (Exception e) {
+            throw new IllegalStateException("Unreadable response body: " + entity.getBody(), e);
+        }
+    }
+
     Response metrics() {
         ResponseEntity<String> entity = client.get().uri("/actuator/prometheus").retrieve().toEntity(String.class);
         return new Response(entity.getStatusCode().value(), null, entity.getBody());

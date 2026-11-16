@@ -33,6 +33,7 @@ app:
     transient-retry:
       initial-interval: 1s
       max-interval: 30s
+    health-timeout: 3s
 
 oncebox:
   # inbox cleanup only
@@ -74,5 +75,11 @@ management:
       application: ${spring.application.name}
   endpoint:
     health:
+      show-components: always
       probes:
         enabled: true
+      group:
+        # Kafka is reported, but not part of readiness: readiness decides whether the notifications API gets HTTP
+        # traffic, and that API reads the database only; consuming goes on or waits regardless
+        readiness:
+          include: readinessState,db
