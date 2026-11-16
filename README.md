@@ -203,13 +203,14 @@ docker run -d --name kafka -p 9092:9092 apache/kafka:3.8.1
 ```
 
 **2. Build and start the services** (one terminal each). `install` puts the shared event contract module into your
-local Maven repository, so each service can then be started on its own. The application tables come from Liquibase,
+local Maven repository, so each service can then be started on its own; the `local` profile logs plain text
+instead of the JSON lines meant for a log shipper. The application tables come from Liquibase,
 the outbox and inbox tables are created by oncebox on startup, and the topics by the services themselves:
 
 ```bash
 mvn clean install -DskipTests
 
-mvn -pl order-service spring-boot:run
+mvn -pl order-service spring-boot:run -Dspring-boot.run.profiles=local
 DB_PORT=5433 mvn -pl notification-service spring-boot:run
 ```
 
