@@ -17,6 +17,7 @@ class OrderUnitTest {
 
     private static final Instant CREATED_AT = Instant.parse("2026-11-14T10:15:30Z");
     private static final Instant CANCELLED_AT = Instant.parse("2026-11-14T11:00:00Z");
+    private static final String TRACE_PARENT = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
 
     @Test
     @DisplayName("UT createdEvent() when the order has items should carry them as lines with the total")
@@ -28,7 +29,7 @@ class OrderUnitTest {
         ));
 
         // when
-        OrderCreatedEvent event = tested.createdEvent("c-1");
+        OrderCreatedEvent event = tested.createdEvent("c-1", TRACE_PARENT);
 
         // then
         assertThat(event).isEqualTo(new OrderCreatedEvent(
@@ -38,7 +39,7 @@ class OrderUnitTest {
                 new BigDecimal("24.00"),
                 CREATED_AT,
                 "c-1",
-                null
+                TRACE_PARENT
         ));
     }
 
@@ -49,10 +50,10 @@ class OrderUnitTest {
         Order tested = order(OrderStatus.CANCELLED, CANCELLED_AT);
 
         // when
-        OrderCancelledEvent event = tested.cancelledEvent("c-1");
+        OrderCancelledEvent event = tested.cancelledEvent("c-1", TRACE_PARENT);
 
         // then
-        assertThat(event).isEqualTo(new OrderCancelledEvent(7L, 42L, CANCELLED_AT, "c-1", null));
+        assertThat(event).isEqualTo(new OrderCancelledEvent(7L, 42L, CANCELLED_AT, "c-1", TRACE_PARENT));
     }
 
     @Test
@@ -62,7 +63,7 @@ class OrderUnitTest {
         Order tested = order(OrderStatus.CREATED, null);
 
         // when / then
-        assertThatThrownBy(() -> tested.cancelledEvent("c-1"))
+        assertThatThrownBy(() -> tested.cancelledEvent("c-1", TRACE_PARENT))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Order 7 is CREATED, not cancelled");
     }

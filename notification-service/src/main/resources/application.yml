@@ -24,6 +24,9 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
+    listener:
+      # every consumed record is handled in a span of its own, so its log lines carry a trace and span id
+      observation-enabled: true
 
 app:
   kafka:
@@ -73,6 +76,11 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+  # Spans are exported over OTLP once MANAGEMENT_OTLP_TRACING_ENDPOINT points at a collector; without it the trace
+  # and span ids still reach the logs
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
   endpoint:
     health:
       show-components: always

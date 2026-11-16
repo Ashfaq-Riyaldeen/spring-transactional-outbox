@@ -54,6 +54,14 @@ final class OrderApi {
                 .toEntity(String.class));
     }
 
+    Response cancelTraced(long id, String traceParent) {
+        return send(client.post()
+                .uri("/api/v1/orders/{id}/cancel", id)
+                .header("traceparent", traceParent)
+                .retrieve()
+                .toEntity(String.class));
+    }
+
     Response dlqCount() {
         return send(client.get().uri("/api/outbox-dlq/events/count").retrieve().toEntity(String.class));
     }

@@ -26,13 +26,14 @@ class OrderCancellation {
     /**
      * @param id            id of the order
      * @param correlationId correlation id the event is published with
+     * @param traceParent   W3C {@code traceparent} the event is published with, or {@code null}
      * @return the order as it is after the cancellation
      * @throws OrderNotFoundException         if there is no such order
      * @throws OrderAlreadyCancelledException if the order is already cancelled
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    @OutboxPublish(eventType = OrderEventTypes.ORDER_CANCELLED, payload = "#result.cancelledEvent(#correlationId)")
-    public Order cancel(long id, String correlationId) {
+    @OutboxPublish(eventType = OrderEventTypes.ORDER_CANCELLED, payload = "#result.cancelledEvent(#correlationId, #traceParent)")
+    public Order cancel(long id, String correlationId, String traceParent) {
         if (!repository.cancel(id, clock.instant().truncatedTo(ChronoUnit.MICROS))) {
             throw repository.exists(id) ? new OrderAlreadyCancelledException(id) : new OrderNotFoundException(id);
         }

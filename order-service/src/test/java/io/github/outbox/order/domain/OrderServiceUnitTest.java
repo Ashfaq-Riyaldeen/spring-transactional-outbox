@@ -10,6 +10,7 @@ import io.github.outbox.order.api.OrderItemResponse;
 import io.github.outbox.order.api.OrderResponse;
 import io.github.outbox.order.ratelimit.OrderCreationRateLimiter;
 import io.github.outbox.order.ratelimit.RateLimitExceededException;
+import io.github.outbox.order.tracing.CurrentTraceParent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,6 +49,7 @@ class OrderServiceUnitTest {
     // Nanoseconds on purpose: the stored time is cut to what the database keeps.
     private static final Instant NOW = Instant.parse("2026-11-14T10:15:30.123456789Z");
     private static final Instant NOW_IN_MICROS = Instant.parse("2026-11-14T10:15:30.123456Z");
+    private static final String TRACE_PARENT = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
 
     @Mock
     private OrderRepository repository;
@@ -61,11 +63,14 @@ class OrderServiceUnitTest {
     @Mock
     private OrderCreationRateLimiter rateLimiter;
 
+    @Mock
+    private CurrentTraceParent traceParent;
+
     private OrderService tested;
 
     @BeforeEach
     void setUp() {
-        tested = new OrderService(repository, cancellation, outboxPublisher, rateLimiter,
+        tested = new OrderService(repository, cancellation, outboxPublisher, rateLimiter, traceParent,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -157,13 +162,14 @@ class OrderServiceUnitTest {
     }
 
     @Test
-    @DisplayName("UT create() when the order is stored should publish order created with its lines and correlation id")
-    void create_whenOrderIsStored_shouldPublishOrderCreatedWithItsLinesAndCorrelationId() {
+    @DisplayName("UT create() when the order is stored should publish order created with its lines and request context")
+    void create_whenOrderIsStored_shouldPublishOrderCreatedWithItsLinesAndRequestContext() {
         // given
         CreateOrderRequest request = new CreateOrderRequest(42L, List.of(
                 new OrderItemRequest("sku-1", 2, new BigDecimal("10.50"))
         ));
         givenRepositoryStoresUnderId(7L);
+        when(traceParent.get()).thenReturn(TRACE_PARENT);
 
         // when
         tested.create(request, "c-1");
@@ -178,8 +184,27 @@ class OrderServiceUnitTest {
                 new BigDecimal("21.00"),
                 NOW_IN_MICROS,
                 "c-1",
-                null
+                TRACE_PARENT
         ));
+    }
+
+    @Test
+    @DisplayName("UT create() when the request is not traced should publish the event without a trace parent")
+    void create_whenRequestIsNotTraced_shouldPublishTheEventWithoutTraceParent() {
+        // given
+        CreateOrderRequest request = new CreateOrderRequest(42L, List.of(
+                new OrderItemRequest("sku-1", 2, new BigDecimal("10.50"))
+        ));
+        givenRepositoryStoresUnderId(7L);
+        when(traceParent.get()).thenReturn(null);
+        ArgumentCaptor<OrderCreatedEvent> event = ArgumentCaptor.forClass(OrderCreatedEvent.class);
+
+        // when
+        tested.create(request, "c-1");
+
+        // then
+        verify(outboxPublisher).publish(eq(OrderEventTypes.ORDER_CREATED), event.capture());
+        assertThat(event.getValue().traceParent()).isNull();
     }
 
     @Test
@@ -224,7 +249,7 @@ class OrderServiceUnitTest {
         // given
         Order cancelled = new Order(7L, 42L, OrderStatus.CANCELLED, BigDecimal.ONE, NOW_IN_MICROS, NOW_IN_MICROS,
                 List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)));
-        when(cancellation.cancel(7L, "c-1")).thenReturn(cancelled);
+        when(cancellation.cancel(7L, "c-1", null)).thenReturn(cancelled);
 
         // when
         tested.cancel(7L, "c-1");
@@ -240,7 +265,23 @@ class OrderServiceUnitTest {
         // given
         Order cancelled = new Order(7L, 42L, OrderStatus.CANCELLED, BigDecimal.ONE, NOW_IN_MICROS, NOW_IN_MICROS,
                 List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)));
-        when(cancellation.cancel(7L, "c-1")).thenReturn(cancelled);
+        when(cancellation.cancel(7L, "c-1", null)).thenReturn(cancelled);
+
+        // when
+        OrderResponse response = tested.cancel(7L, "c-1");
+
+        // then
+        assertThat(response).isEqualTo(OrderResponse.from(cancelled));
+    }
+
+    @Test
+    @DisplayName("UT cancel() when the request is traced should cancel under its trace parent")
+    void cancel_whenRequestIsTraced_shouldCancelUnderItsTraceParent() {
+        // given
+        Order cancelled = new Order(7L, 42L, OrderStatus.CANCELLED, BigDecimal.ONE, NOW_IN_MICROS, NOW_IN_MICROS,
+                List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)));
+        when(traceParent.get()).thenReturn(TRACE_PARENT);
+        when(cancellation.cancel(7L, "c-1", TRACE_PARENT)).thenReturn(cancelled);
 
         // when
         OrderResponse response = tested.cancel(7L, "c-1");
@@ -256,7 +297,7 @@ class OrderServiceUnitTest {
         Order cancelled = new Order(7L, 42L, OrderStatus.CANCELLED, BigDecimal.ONE, NOW_IN_MICROS, NOW_IN_MICROS,
                 List.of(new OrderItem("sku-1", 1, BigDecimal.ONE)));
         ArgumentCaptor<String> correlationId = ArgumentCaptor.forClass(String.class);
-        when(cancellation.cancel(eq(7L), correlationId.capture())).thenReturn(cancelled);
+        when(cancellation.cancel(eq(7L), correlationId.capture(), any())).thenReturn(cancelled);
 
         // when
         tested.cancel(7L, null);

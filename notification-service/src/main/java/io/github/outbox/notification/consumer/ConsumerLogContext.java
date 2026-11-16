@@ -7,11 +7,17 @@ import org.springframework.messaging.Message;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Names the consumed event in the MDC while it is handled, so that every log line written meanwhile carries the
- * event id, its type, the order and customer it is about and the correlation id of the request that caused it.
- * Closing removes exactly the keys it put: the listener thread may hold other keys, such as those of tracing.
+ * event id, its type, the order and customer it is about, and the correlation id and trace id of the request that
+ * caused it. Closing removes exactly the keys it put: the listener thread may hold other keys, such as those of
+ * tracing.
+ * <p>
+ * The trace id of the causing request goes under a key of its own: the record is handled in the consumer's own
+ * trace, whose id tracing keeps under {@code traceId}.
  */
 final class ConsumerLogContext implements AutoCloseable {
 
@@ -20,9 +26,12 @@ final class ConsumerLogContext implements AutoCloseable {
     static final String ORDER_ID = "orderId";
     static final String CUSTOMER_ID = "customerId";
     static final String CORRELATION_ID = "correlationId";
+    static final String ORIGIN_TRACE_ID = "originTraceId";
 
     private static final String EVENT_ID_HEADER = "oncebox_event_id";
     private static final String EVENT_TYPE_HEADER = "oncebox_event_type";
+    // W3C traceparent: version, trace id, parent span id, flags
+    private static final Pattern TRACE_PARENT = Pattern.compile("[0-9a-f]{2}-([0-9a-f]{32})-[0-9a-f]{16}-[0-9a-f]{2}");
 
     private final List<String> keys = new ArrayList<>();
 
@@ -30,7 +39,8 @@ final class ConsumerLogContext implements AutoCloseable {
     }
 
     /**
-     * Puts what the message carries; a header or field that is missing is left out rather than logged as empty.
+     * Puts what the message carries; a header or field that is missing, or a trace parent that is not a W3C
+     * {@code traceparent}, is left out rather than logged as empty.
      */
     static ConsumerLogContext of(Message<OrderEvent> message) {
         ConsumerLogContext context = new ConsumerLogContext();
@@ -41,6 +51,7 @@ final class ConsumerLogContext implements AutoCloseable {
             context.put(ORDER_ID, String.valueOf(event.orderId()));
             context.put(CUSTOMER_ID, String.valueOf(event.customerId()));
             context.put(CORRELATION_ID, event.correlationId());
+            context.put(ORIGIN_TRACE_ID, traceId(event.traceParent()));
         }
         return context;
     }
@@ -55,6 +66,14 @@ final class ConsumerLogContext implements AutoCloseable {
             MDC.put(key, value);
             keys.add(key);
         }
+    }
+
+    private static String traceId(String traceParent) {
+        if (traceParent == null) {
+            return null;
+        }
+        Matcher matcher = TRACE_PARENT.matcher(traceParent);
+        return matcher.matches() ? matcher.group(1) : null;
     }
 
     // Kafka hands raw header values over as bytes; the inbox factory may already have turned them into strings.

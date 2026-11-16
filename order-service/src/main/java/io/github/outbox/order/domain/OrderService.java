@@ -7,6 +7,7 @@ import io.github.outbox.order.api.CreateOrderRequest;
 import io.github.outbox.order.api.OrderResponse;
 import io.github.outbox.order.ratelimit.OrderCreationRateLimiter;
 import io.github.outbox.order.ratelimit.RateLimitExceededException;
+import io.github.outbox.order.tracing.CurrentTraceParent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -36,11 +37,12 @@ public class OrderService {
     private final OrderCancellation cancellation;
     private final OutboxPublisher outboxPublisher;
     private final OrderCreationRateLimiter rateLimiter;
+    private final CurrentTraceParent traceParent;
     private final Clock clock;
 
     /**
      * Stores a new order and, in the same transaction, the {@link OrderCreatedEvent} about it: either both are
-     * committed or neither is.
+     * committed or neither is. The event carries the trace context of the calling request.
      *
      * @param request       the order as the client sent it
      * @param correlationId correlation id of the request; a new one is generated when it is {@code null} or blank
@@ -58,7 +60,8 @@ public class OrderService {
                 .map(OrderItem::subtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         Order order = repository.save(request.customerId(), items, total, now());
-        outboxPublisher.publish(OrderEventTypes.ORDER_CREATED, order.createdEvent(correlationIdOrNew(correlationId)));
+        outboxPublisher.publish(OrderEventTypes.ORDER_CREATED,
+                order.createdEvent(correlationIdOrNew(correlationId), traceParent.get()));
         MDC.put(MDC_ORDER_ID, String.valueOf(order.id()));
         log.info("Order created orderId={} customerId={} total={}", order.id(), order.customerId(), order.total());
         return OrderResponse.from(order);
@@ -66,7 +69,7 @@ public class OrderService {
 
     /**
      * Cancels an order that is still {@link OrderStatus#CREATED} and, in the same transaction, publishes the
-     * {@link io.github.outbox.contract.OrderCancelledEvent} about it.
+     * {@link io.github.outbox.contract.OrderCancelledEvent} about it, with the trace context of the calling request.
      *
      * @param id            id of the order
      * @param correlationId correlation id of the request; a new one is generated when it is {@code null} or blank
@@ -77,7 +80,7 @@ public class OrderService {
     @Transactional
     public OrderResponse cancel(long id, String correlationId) {
         MDC.put(MDC_ORDER_ID, String.valueOf(id));
-        Order order = cancellation.cancel(id, correlationIdOrNew(correlationId));
+        Order order = cancellation.cancel(id, correlationIdOrNew(correlationId), traceParent.get());
         MDC.put(MDC_CUSTOMER_ID, String.valueOf(order.customerId()));
         log.info("Order cancelled orderId={} customerId={}", order.id(), order.customerId());
         return OrderResponse.from(order);

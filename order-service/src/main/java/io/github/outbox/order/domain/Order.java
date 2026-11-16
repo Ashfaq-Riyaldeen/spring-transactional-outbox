@@ -31,20 +31,20 @@ public record Order(long id,
         items = List.copyOf(items);
     }
 
-    public OrderCreatedEvent createdEvent(String correlationId) {
+    public OrderCreatedEvent createdEvent(String correlationId, String traceParent) {
         List<OrderLine> lines = items.stream()
                 .map(item -> new OrderLine(item.productId(), item.quantity(), item.price()))
                 .toList();
-        return new OrderCreatedEvent(id, customerId, lines, total, createdAt, correlationId, null);
+        return new OrderCreatedEvent(id, customerId, lines, total, createdAt, correlationId, traceParent);
     }
 
     /**
      * @throws IllegalStateException if the order is not cancelled
      */
-    public OrderCancelledEvent cancelledEvent(String correlationId) {
+    public OrderCancelledEvent cancelledEvent(String correlationId, String traceParent) {
         if (status != OrderStatus.CANCELLED) {
             throw new IllegalStateException("Order %d is %s, not cancelled".formatted(id, status));
         }
-        return new OrderCancelledEvent(id, customerId, cancelledAt, correlationId, null);
+        return new OrderCancelledEvent(id, customerId, cancelledAt, correlationId, traceParent);
     }
 }

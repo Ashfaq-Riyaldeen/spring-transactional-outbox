@@ -45,6 +45,26 @@ class PostOrderEndToEndTest extends OrderServiceEndToEndTestBase {
     }
 
     @Test
+    @DisplayName("E2E POST /orders when the request is traced should publish the event with a trace parent in its trace")
+    void post_whenRequestIsTraced_shouldPublishTheEventWithTraceParentInItsTrace() {
+        // given
+        String traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+
+        // when
+        Response created = api.createTraced(orderBody(newCustomerId()), "00-" + traceId + "-00f067aa0ba902b7-01");
+
+        // then
+        assertThat(created.status()).as(created.body()).isEqualTo(201);
+        long orderId = created.json().get("id").asLong();
+        Waits.awaitDelivery().until(() -> events.events(OrderEventTypes.ORDER_CREATED, "orderId", orderId).size() == 1);
+        PublishedEvent event = events.events(OrderEventTypes.ORDER_CREATED, "orderId", orderId).getFirst();
+        // the span is the service's own, a child of the caller's
+        assertThat(event.payload().get("traceParent").asText())
+                .matches("00-" + traceId + "-[0-9a-f]{16}-01")
+                .doesNotContain("00f067aa0ba902b7");
+    }
+
+    @Test
     @DisplayName("E2E POST /orders when the request is invalid should answer 400 and publish nothing")
     void post_whenRequestIsInvalid_shouldAnswer400AndPublishNothing() {
         // given

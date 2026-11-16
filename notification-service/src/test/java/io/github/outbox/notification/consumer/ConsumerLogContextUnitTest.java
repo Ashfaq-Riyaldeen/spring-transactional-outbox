@@ -5,6 +5,8 @@ import io.github.outbox.contract.OrderEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.MDC;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -49,6 +51,47 @@ class ConsumerLogContextUnitTest {
     }
 
     @Test
+    @DisplayName("UT of() when the event carries a trace parent should name the trace id of the causing request")
+    void of_whenEventCarriesTraceParent_shouldNameTheTraceIdOfTheCausingRequest() {
+        // given
+        Message<OrderEvent> message = MessageBuilder.withPayload(tracedEvent(
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")).build();
+
+        // when
+        ConsumerLogContext.of(message);
+
+        // then
+        assertThat(MDC.get(ConsumerLogContext.ORIGIN_TRACE_ID)).isEqualTo("4bf92f3577b34da6a3ce929d0e0e4736");
+    }
+
+    @Test
+    @DisplayName("UT of() when the event carries no trace parent should leave the origin trace id out")
+    void of_whenEventCarriesNoTraceParent_shouldLeaveTheOriginTraceIdOut() {
+        // when
+        ConsumerLogContext.of(MessageBuilder.withPayload(EVENT).build());
+
+        // then
+        assertThat(MDC.get(ConsumerLogContext.ORIGIN_TRACE_ID)).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "",
+            "4bf92f3577b34da6a3ce929d0e0e4736",
+            "00-4bf92f3577b34da6-00f067aa0ba902b7-01",
+            "00-4BF92F3577B34DA6A3CE929D0E0E4736-00f067aa0ba902b7-01",
+            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-extra"
+    })
+    @DisplayName("UT of() when the trace parent is not a W3C traceparent should leave the origin trace id out")
+    void of_whenTraceParentIsNotW3cTraceparent_shouldLeaveTheOriginTraceIdOut(String traceParent) {
+        // when
+        ConsumerLogContext.of(MessageBuilder.withPayload(tracedEvent(traceParent)).build());
+
+        // then
+        assertThat(MDC.get(ConsumerLogContext.ORIGIN_TRACE_ID)).isNull();
+    }
+
+    @Test
     @DisplayName("UT of() when headers come as bytes should log them as text")
     void of_whenHeadersComeAsBytes_shouldLogThemAsText() {
         // given
@@ -89,5 +132,9 @@ class ConsumerLogContextUnitTest {
 
         // then
         assertThat(MDC.getCopyOfContextMap()).containsExactly(Map.entry("traceId", "4bf92f3577b34da6a3ce929d0e0e4736"));
+    }
+
+    private static OrderEvent tracedEvent(String traceParent) {
+        return new OrderCancelledEvent(7L, 42L, Instant.parse("2026-11-14T10:15:30Z"), "checkout-1", traceParent);
     }
 }

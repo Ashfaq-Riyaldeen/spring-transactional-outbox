@@ -35,6 +35,24 @@ class CancelOrderFlowEndToEndTest extends OrderServiceEndToEndTestBase {
     }
 
     @Test
+    @DisplayName("E2E cancel flow when the cancelling request is traced should publish order cancelled in its trace")
+    void cancel_whenCancellingRequestIsTraced_shouldPublishOrderCancelledInItsTrace() {
+        // given
+        long orderId = createOrder();
+        String traceId = "0af7651916cd43dd8448eb211c80319c";
+
+        // when
+        Response cancelled = api.cancelTraced(orderId, "00-" + traceId + "-b7ad6b7169203331-01");
+
+        // then
+        assertThat(cancelled.status()).as(cancelled.body()).isEqualTo(200);
+        Waits.awaitDelivery()
+                .until(() -> events.events(OrderEventTypes.ORDER_CANCELLED, "orderId", orderId).size() == 1);
+        PublishedEvent event = events.events(OrderEventTypes.ORDER_CANCELLED, "orderId", orderId).getFirst();
+        assertThat(event.payload().get("traceParent").asText()).matches("00-" + traceId + "-[0-9a-f]{16}-01");
+    }
+
+    @Test
     @DisplayName("E2E cancel flow when an order is cancelled twice should answer 409 and publish one cancellation")
     void cancel_whenOrderIsCancelledTwice_shouldAnswer409AndPublishOneCancellation() {
         // given

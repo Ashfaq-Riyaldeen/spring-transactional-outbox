@@ -44,7 +44,7 @@ class OrderCancellationUnitTest {
         when(repository.findById(7L)).thenReturn(Optional.of(cancelled));
 
         // when
-        Order order = tested.cancel(7L, "c-1");
+        Order order = tested.cancel(7L, "c-1", null);
 
         // then
         assertThat(order).isEqualTo(cancelled);
@@ -58,7 +58,7 @@ class OrderCancellationUnitTest {
         when(repository.exists(7L)).thenReturn(true);
 
         // when / then
-        assertThatThrownBy(() -> tested.cancel(7L, "c-1"))
+        assertThatThrownBy(() -> tested.cancel(7L, "c-1", null))
                 .isInstanceOf(OrderAlreadyCancelledException.class)
                 .hasMessage("Order 7 is already cancelled");
     }
@@ -71,7 +71,7 @@ class OrderCancellationUnitTest {
         when(repository.exists(7L)).thenReturn(false);
 
         // when / then
-        assertThatThrownBy(() -> tested.cancel(7L, "c-1"))
+        assertThatThrownBy(() -> tested.cancel(7L, "c-1", null))
                 .isInstanceOf(OrderNotFoundException.class)
                 .hasMessage("Order 7 not found");
     }
