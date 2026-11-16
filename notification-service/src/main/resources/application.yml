@@ -51,6 +51,8 @@ oncebox:
       ttl: 7d
       polling:
         initial-delay: 1m
+    metrics:
+      enabled: true
 
 springdoc:
   api-docs:
@@ -66,7 +68,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
   endpoint:
     health:
       probes:

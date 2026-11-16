@@ -35,6 +35,11 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
@@ -45,6 +50,10 @@
         <dependency>
             <groupId>io.github.dmitriy-iliyov</groupId>
             <artifactId>oncebox-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.dmitriy-iliyov</groupId>
+            <artifactId>oncebox-metrics</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.kafka</groupId>

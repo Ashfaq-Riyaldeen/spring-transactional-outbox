@@ -2,6 +2,7 @@ package io.github.outbox.notification.e2e;
 
 import io.github.outbox.notification.NotificationServiceApplication;
 import org.junit.jupiter.api.AfterEach;
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -16,6 +17,8 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 @SpringBootTest(classes = NotificationServiceApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// Spring Boot turns metrics export off in tests; the service is started here as in production, metrics included.
+@AutoConfigureObservability
 @Testcontainers
 @RequiresDocker
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)

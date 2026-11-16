@@ -32,6 +32,11 @@ final class NotificationApi {
         }
     }
 
+    Response metrics() {
+        ResponseEntity<String> entity = client.get().uri("/actuator/prometheus").retrieve().toEntity(String.class);
+        return new Response(entity.getStatusCode().value(), null, entity.getBody());
+    }
+
     record Response(int status, JsonNode json, String body) {
     }
 }
