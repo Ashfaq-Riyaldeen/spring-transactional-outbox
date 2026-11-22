@@ -279,6 +279,17 @@ Errors come back as RFC 9457 problem details, with a `type` a client can branch 
 }
 ```
 
+**Everything in containers.** [`docker/compose.servlet.yml`](docker/compose.servlet.yml) runs both services with
+databases and a Kafka of their own, with nothing but Docker on the host:
+
+```bash
+docker compose -f docker/compose.servlet.yml up -d
+```
+
+The order service answers on http://localhost:8180 and the notification service on http://localhost:8181; the
+requests above work the same on these ports. The first start builds the service images from the sources, which
+takes a few minutes. `docker compose -f docker/compose.servlet.yml down` removes the stack.
+
 ## 🔁 See the inbox at work
 
 Send the last `order-created` event to Kafka **once more, under its original id** - exactly what a lost

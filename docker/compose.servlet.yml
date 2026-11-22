@@ -1,0 +1,97 @@
+# The whole system in containers: both services with their databases and Kafka.
+# docker compose -f docker/compose.servlet.yml up -d
+# The services run from the images published to GHCR on release (APP_VERSION, latest by default); where an image
+# cannot be pulled, it is built from the sources of this repository.
+# Only the services are published on the host, so the stack runs next to the root docker-compose.yml.
+name: outbox-servlet
+
+services:
+  orders-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders -d orders"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  notifications-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notifications
+      POSTGRES_USER: notifications
+      POSTGRES_PASSWORD: notifications
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notifications -d notifications"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: apache/kafka:3.8.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  kafka-init:
+    image: apache/kafka:3.8.1
+    depends_on:
+      - kafka
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        for attempt in $$(seq 1 30); do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list >/dev/null 2>&1 && break
+          [ "$$attempt" = 30 ] && { echo "Kafka did not start"; exit 1; }
+          sleep 2
+        done
+        for topic in order-events:3 order-events-dlt:1; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists \
+            --topic "$${topic%%:*}" --partitions "$${topic##*:}" --replication-factor 1 || exit 1
+        done
+
+  order-service:
+    image: ghcr.io/dmitriy-iliyov/spring-transactional-outbox/order-service:${APP_VERSION:-latest}
+    build:
+      context: ..
+      dockerfile: order-service/Dockerfile
+    ports:
+      - "${ORDER_SERVICE_PORT:-8180}:8080"
+    environment:
+      DB_HOST: orders-db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    # restarted until its database and the topics are there
+    restart: on-failure
+    depends_on:
+      - orders-db
+      - kafka-init
+
+  notification-service:
+    image: ghcr.io/dmitriy-iliyov/spring-transactional-outbox/notification-service:${APP_VERSION:-latest}
+    build:
+      context: ..
+      dockerfile: notification-service/Dockerfile
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-8181}:8081"
+    environment:
+      DB_HOST: notifications-db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    restart: on-failure
+    depends_on:
+      - notifications-db
+      - kafka-init
