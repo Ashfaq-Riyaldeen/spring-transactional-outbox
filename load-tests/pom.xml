@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.dmitriyiliyov</groupId>
+        <artifactId>spring-transactional-outbox</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>load-tests</artifactId>
+    <name>load-tests</name>
+    <description>Gatling load tests of the order service, run against a started stack</description>
+
+    <properties>
+        <gatling.version>3.15.1</gatling.version>
+        <gatling-maven-plugin.version>4.21.9</gatling-maven-plugin.version>
+        <!-- the Netty line Gatling is built on; the Spring Boot parent would manage the older one -->
+        <netty.version>4.2.14.Final</netty.version>
+        <!-- simulations only: nothing here is measured by coverage, and nothing runs in mvn verify -->
+        <jacoco.skip>true</jacoco.skip>
+        <maven.install.skip>true</maven.install.skip>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.gatling.highcharts</groupId>
+            <artifactId>gatling-charts-highcharts</artifactId>
+            <version>${gatling.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.gatling</groupId>
+                <artifactId>gatling-maven-plugin</artifactId>
+                <version>${gatling-maven-plugin.version}</version>
+                <configuration>
+                    <simulationClass>io.github.outbox.loadtests.CreateOrderSimulation</simulationClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

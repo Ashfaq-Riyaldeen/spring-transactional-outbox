@@ -77,6 +77,9 @@ services:
     environment:
       DB_HOST: orders-db
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      # a load test from one machine runs into these, see load-tests/README.md
+      ORDER_RATE_LIMIT_GLOBAL_CAPACITY: ${ORDER_RATE_LIMIT_GLOBAL_CAPACITY:-100}
+      ORDER_RATE_LIMIT_PER_IP_CAPACITY: ${ORDER_RATE_LIMIT_PER_IP_CAPACITY:-20}
     # started once its database accepts connections and the topics exist
     depends_on:
       orders-db:

@@ -30,6 +30,7 @@
         <module>order-service-e2e-tests</module>
         <module>notification-service</module>
         <module>notification-service-e2e-tests</module>
+        <module>load-tests</module>
     </modules>
 
     <properties>
