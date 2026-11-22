@@ -49,3 +49,25 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # a topic exists only if kafka-init created it; a mistyped name fails instead of creating a stray topic
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  # Creates the topics with their partitions before the services connect, so a consumer never subscribes to a
+  # topic that is still missing partitions, then exits
+  kafka-init:
+    image: apache/kafka:3.8.1
+    depends_on:
+      - kafka
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        for attempt in $$(seq 1 30); do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list >/dev/null 2>&1 && break
+          [ "$$attempt" = 30 ] && { echo "Kafka did not start"; exit 1; }
+          sleep 2
+        done
+        for topic in order-events:3 order-events-dlt:1; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists \
+            --topic "$${topic%%:*}" --partitions "$${topic##*:}" --replication-factor 1 || exit 1
+        done

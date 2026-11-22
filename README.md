@@ -203,12 +203,14 @@ docker compose up -d
 | `notifications-db` (PostgreSQL, database / user / password `notifications`) | 5433 |
 | `kafka` | 9092 |
 
-`docker compose down` stops it and removes its data.
+A one-off `kafka-init` container creates the topics, `order-events` with 3 partitions and its dead letter topic
+`order-events-dlt`, and exits; Kafka does not create topics on its own. `docker compose down` stops it all and
+removes its data.
 
 **2. Build and start the services** (one terminal each). `install` puts the shared event contract module into your
 local Maven repository, so each service can then be started on its own; the `local` profile logs plain text
 instead of the JSON lines meant for a log shipper. The application tables come from Liquibase,
-the outbox and inbox tables are created by oncebox on startup, and the topics by the services themselves:
+the outbox and inbox tables are created by oncebox on startup:
 
 ```bash
 mvn clean install -DskipTests
