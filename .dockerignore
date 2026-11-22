@@ -1,0 +1,8 @@
+# A service image is built from the Maven wrapper, the poms and the main sources only
+*
+!mvnw
+!.mvn/wrapper/maven-wrapper.properties
+!lombok.config
+!pom.xml
+!*/pom.xml
+!*/src/main
