@@ -1,0 +1,23 @@
+# syntax=docker/dockerfile:1
+
+# Built from the repository root: docker build -f notification-service/Dockerfile -t notification-service .
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /workspace
+COPY . .
+RUN --mount=type=cache,target=/root/.m2 \
+    ./mvnw -B -ntp -pl notification-service -am package -Dmaven.test.skip=true -Djacoco.skip=true
+# dependencies change least often, the application classes most often: one image layer each
+RUN java -Djarmode=tools -jar notification-service/target/notification-service-*-exec.jar \
+    extract --layers --launcher --destination /extracted
+
+FROM eclipse-temurin:21-jre
+RUN groupadd --system app && useradd --system --gid app --no-create-home app
+WORKDIR /app
+COPY --from=build /extracted/dependencies/ ./
+COPY --from=build /extracted/spring-boot-loader/ ./
+COPY --from=build /extracted/snapshot-dependencies/ ./
+COPY --from=build /extracted/application/ ./
+USER app
+EXPOSE 8081
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
