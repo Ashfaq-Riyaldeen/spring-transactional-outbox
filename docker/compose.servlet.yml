@@ -46,20 +46,22 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:29092 >/dev/null"]
+      interval: 10s
+      timeout: 10s
+      start_period: 20s
+      retries: 10
 
   kafka-init:
     image: apache/kafka:3.8.1
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     restart: "no"
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
-        for attempt in $$(seq 1 30); do
-          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list >/dev/null 2>&1 && break
-          [ "$$attempt" = 30 ] && { echo "Kafka did not start"; exit 1; }
-          sleep 2
-        done
         for topic in order-events:3 order-events-dlt:1; do
           /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists \
             --topic "$${topic%%:*}" --partitions "$${topic##*:}" --replication-factor 1 || exit 1
@@ -75,11 +77,22 @@ services:
     environment:
       DB_HOST: orders-db
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-    # restarted until its database and the topics are there
-    restart: on-failure
+    # started once its database accepts connections and the topics exist
     depends_on:
-      - orders-db
-      - kafka-init
+      orders-db:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    # healthy once ready for traffic: started, with its database reachable
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    # longer than the 30 s graceful shutdown, so requests and outbox batches in flight finish before a kill
+    stop_grace_period: 40s
+    restart: on-failure
 
   notification-service:
     image: ghcr.io/dmitriy-iliyov/spring-transactional-outbox/notification-service:${APP_VERSION:-latest}
@@ -91,7 +104,16 @@ services:
     environment:
       DB_HOST: notifications-db
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-    restart: on-failure
     depends_on:
-      - notifications-db
-      - kafka-init
+      notifications-db:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8081/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    stop_grace_period: 40s
+    restart: on-failure

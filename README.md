@@ -283,10 +283,10 @@ Errors come back as RFC 9457 problem details, with a `type` a client can branch 
 databases and a Kafka of their own, with nothing but Docker on the host:
 
 ```bash
-docker compose -f docker/compose.servlet.yml up -d
+docker compose -f docker/compose.servlet.yml up -d --wait
 ```
 
-The order service answers on http://localhost:8180 and the notification service on http://localhost:8181; the
+`--wait` returns once both services report ready. The order service answers on http://localhost:8180 and the notification service on http://localhost:8181; the
 requests above work the same on these ports. The first start builds the service images from the sources, which
 takes a few minutes. `docker compose -f docker/compose.servlet.yml down` removes the stack.
 
