@@ -205,7 +205,7 @@ docker compose up -d
 
 A one-off `kafka-init` container creates the topics, `order-events` with 3 partitions and its dead letter topic
 `order-events-dlt`, and exits; Kafka does not create topics on its own. `docker compose down` stops it all and
-removes its data.
+removes its data. The image versions and host ports are set in [`.env`](.env).
 
 **2. Build and start the services** (one terminal each). `install` puts the shared event contract module into your
 local Maven repository, so each service can then be started on its own; the `local` profile logs plain text
@@ -292,7 +292,7 @@ EVENT=$(docker compose exec -T orders-db psql -U orders -d orders -Atc \
 
 printf 'oncebox_event_id:%s,oncebox_event_type:order-created\t%s\n' "${EVENT%% *}" "${EVENT#* }" \
   | docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh \
-      --bootstrap-server localhost:9092 --topic order-events --property parse.headers=true
+      --bootstrap-server kafka:29092 --topic order-events --property parse.headers=true
 ```
 
 The console producer sends the payload with the same headers the outbox sets. The notification service receives it,
