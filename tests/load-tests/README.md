@@ -19,10 +19,10 @@ ORDER_RATE_LIMIT_GLOBAL_CAPACITY=1000 ORDER_RATE_LIMIT_PER_IP_CAPACITY=1000 \
 Then run the simulation from the repository root, picking the profile:
 
 ```bash
-./mvnw -pl load-tests gatling:test -DbaseUrl=http://localhost:8180 -Dprofile=steady
+./mvnw -pl tests/load-tests gatling:test -DbaseUrl=http://localhost:8180 -Dprofile=steady
 ```
 
-The report is written to `load-tests/target/gatling/`.
+The report is written to `tests/load-tests/target/gatling/`.
 
 ### Profiles
 

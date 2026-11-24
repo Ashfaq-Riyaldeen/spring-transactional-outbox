@@ -344,9 +344,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the test conventions.
 |--------|---------|
 | `events-contract` | event types and the sealed `OrderEvent` payload records shared by both services |
 | `order-service` | orders API, transactional outbox, outbox DLQ API |
-| `order-service-e2e-tests` | end-to-end tests of `order-service`, including a Kafka outage |
+| `tests/order-service-e2e-tests` | end-to-end tests of `order-service`, including a Kafka outage |
 | `notification-service` | transactional inbox, notifications and their API, dead letter topic |
-| `notification-service-e2e-tests` | end-to-end tests of `notification-service`: redelivery, failures, dead letters |
+| `tests/notification-service-e2e-tests` | end-to-end tests of `notification-service`: redelivery, failures, dead letters |
 
 ## 🤝 Contributing
 

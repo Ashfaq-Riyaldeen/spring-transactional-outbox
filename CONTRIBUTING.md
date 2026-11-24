@@ -76,9 +76,9 @@ git push --force-with-lease
 |---|---|
 | `events-contract` | The events shared by both services: the sealed `OrderEvent` and its records, the event type names |
 | `order-service` | REST API for orders; publishes `order-created` and `order-cancelled` through the oncebox outbox to Kafka, with a dead letter queue and its REST API |
-| `order-service-e2e-tests` | End-to-end tests of the packaged order service over PostgreSQL and Kafka |
+| `tests/order-service-e2e-tests` | End-to-end tests of the packaged order service over PostgreSQL and Kafka |
 | `notification-service` | Consumes order events through the oncebox transactional inbox, exactly one notification per event; failed records go to a dead letter topic |
-| `notification-service-e2e-tests` | End-to-end tests of the packaged notification service, with the order service played over Kafka |
+| `tests/notification-service-e2e-tests` | End-to-end tests of the packaged notification service, with the order service played over Kafka |
 
 Base package: `io.github.outbox` (`.contract`, `.order`, `.notification`). The contract module holds only
 events; request and response records live in the service that owns the API.
@@ -105,7 +105,7 @@ One module, or one test class:
 An end-to-end module runs against the packaged service, so build it together with what it depends on:
 
 ```shell
-./mvnw -pl order-service-e2e-tests -am verify
+./mvnw -pl tests/order-service-e2e-tests -am verify
 ```
 
 Each module fails the build below **80% line coverage** (JaCoCo). Tests that need Docker are skipped on a machine

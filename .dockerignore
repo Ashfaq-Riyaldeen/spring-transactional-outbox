@@ -5,4 +5,5 @@
 !lombok.config
 !pom.xml
 !*/pom.xml
+!tests/*/pom.xml
 !*/src/main
