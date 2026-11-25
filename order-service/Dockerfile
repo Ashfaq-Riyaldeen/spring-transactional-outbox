@@ -12,6 +12,8 @@ RUN java -Djarmode=tools -jar order-service/target/order-service-*-exec.jar \
 
 FROM eclipse-temurin:21-jre
 RUN groupadd --system app && useradd --system --gid app --no-create-home app
+# owned by the app user, so a volume mounted here starts writable for it
+RUN mkdir -p /var/log/app && chown app:app /var/log/app
 WORKDIR /app
 COPY --from=build /extracted/dependencies/ ./
 COPY --from=build /extracted/spring-boot-loader/ ./

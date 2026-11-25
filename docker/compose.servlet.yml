@@ -88,6 +88,11 @@ services:
       # spans go to the Tempo of the observability profile once TRACING_EXPORT_ENABLED=true
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://tempo:4318/v1/traces
       MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: ${TRACING_EXPORT_ENABLED:-false}
+      # the JSON lines also go to a file in service-logs, tailed by the Fluent Bit of the observability profile
+      SPRING_PROFILES_ACTIVE: json-file
+      APP_LOGGING_JSON_FILE_DIR: /var/log/app
+    volumes:
+      - service-logs:/var/log/app
     # started once its database accepts connections and the topics exist
     depends_on:
       orders-db:
@@ -118,6 +123,11 @@ services:
       # spans go to the Tempo of the observability profile once TRACING_EXPORT_ENABLED=true
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://tempo:4318/v1/traces
       MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: ${TRACING_EXPORT_ENABLED:-false}
+      # the JSON lines also go to a file in service-logs, tailed by the Fluent Bit of the observability profile
+      SPRING_PROFILES_ACTIVE: json-file
+      APP_LOGGING_JSON_FILE_DIR: /var/log/app
+    volumes:
+      - service-logs:/var/log/app
     depends_on:
       notifications-db:
         condition: service_healthy
@@ -131,3 +141,6 @@ services:
       retries: 5
     stop_grace_period: 40s
     restart: on-failure
+
+volumes:
+  service-logs:

@@ -1,0 +1,32 @@
+{
+  "index_patterns": ["service-logs-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "dynamic_templates": [
+        {
+          "mdc_as_keywords": {
+            "match_mapping_type": "string",
+            "mapping": { "type": "keyword", "ignore_above": 1024 }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": { "type": "date_nanos" },
+        "ingested_at": { "type": "date" },
+        "message": { "type": "text" },
+        "stack_trace": { "type": "text" },
+        "level": { "type": "keyword" },
+        "level_value": { "type": "integer" },
+        "application": { "type": "keyword" },
+        "logger_name": { "type": "keyword" },
+        "thread_name": { "type": "keyword" },
+        "traceId": { "type": "keyword" },
+        "spanId": { "type": "keyword" }
+      }
+    }
+  }
+}

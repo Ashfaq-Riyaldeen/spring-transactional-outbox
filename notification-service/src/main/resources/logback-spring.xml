@@ -2,11 +2,14 @@
 <!--
     One JSON object per line on stdout, ready for a log shipper: timestamp, level, logger, thread, message, MDC.
     The local profile writes Spring Boot's plain text instead, for a person reading the console.
+    The json-file profile also writes the JSON lines to <app.logging.json-file.dir>/<application>.json, rolled
+    daily and at 50 MB and kept for a week, for a shipper that tails files.
 -->
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
     <springProperty name="application" source="spring.application.name" defaultValue="notification-service"/>
+    <springProperty name="jsonFileDir" source="app.logging.json-file.dir" defaultValue="logs"/>
 
     <springProfile name="local">
         <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
@@ -27,6 +30,28 @@
         </appender>
         <root level="INFO">
             <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="json-file">
+        <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${jsonFileDir}/${application}.json</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${jsonFileDir}/${application}-%d{yyyy-MM-dd}.%i.json.gz</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <maxHistory>7</maxHistory>
+                <totalSizeCap>1GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <customFields>{"application":"${application}"}</customFields>
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                    <rootCauseFirst>true</rootCauseFirst>
+                </throwableConverter>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON_FILE"/>
         </root>
     </springProfile>
 </configuration>

@@ -70,6 +70,60 @@ services:
       start_period: 20s
       retries: 10
 
+  opensearch:
+    profiles: ["observability"]
+    image: opensearchproject/opensearch:2.19.2
+    environment:
+      discovery.type: single-node
+      # local, single-user monitoring: no TLS and no login, never published beyond this machine
+      plugins.security.disabled: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "127.0.0.1:${OPENSEARCH_PORT}:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health?wait_for_status=yellow"]
+      interval: 10s
+      timeout: 10s
+      start_period: 30s
+      retries: 20
+
+  # The index template and the retention policy of the service-logs indices, applied before the first line is
+  # shipped; then exits
+  opensearch-init:
+    profiles: ["observability"]
+    image: curlimages/curl:8.12.1
+    restart: "no"
+    volumes:
+      - ./opensearch:/opensearch:ro
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        curl -fsS -X PUT http://opensearch:9200/_plugins/_ism/policies/service-logs \
+          -H 'Content-Type: application/json' -d @/opensearch/ism-policy.json -o /dev/null \
+          || curl -fsS http://opensearch:9200/_plugins/_ism/policies/service-logs -o /dev/null
+        curl -fsS -X PUT http://opensearch:9200/_index_template/service-logs \
+          -H 'Content-Type: application/json' -d @/opensearch/index-template.json -o /dev/null
+        echo "service-logs template and policy applied"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+
+  fluent-bit:
+    profiles: ["observability"]
+    image: fluent/fluent-bit:3.2.10
+    volumes:
+      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+      - ${SERVICE_LOGS}:/var/log/app:ro
+      - fluent-bit-state:/fluent-bit/state
+    restart: unless-stopped
+    depends_on:
+      opensearch-init:
+        condition: service_completed_successfully
+
   # one exporter per database: orders-db and notifications-db are the same service names in both stacks
   orders-db-exporter:
     profiles: ["observability"]
@@ -91,3 +145,5 @@ volumes:
   prometheus-data:
   grafana-data:
   tempo-data:
+  opensearch-data:
+  fluent-bit-state:
