@@ -36,6 +36,7 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana-dashboards:ro
       - grafana-data:/var/lib/grafana
     ports:
       - "${GRAFANA_PORT}:3000"

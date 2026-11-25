@@ -307,6 +307,9 @@ docker compose -f docker/compose.servlet.yml --profile observability up -d --wai
 | Grafana (`admin` / `admin`) | http://localhost:3000 | http://localhost:3100 |
 | Prometheus | http://localhost:9090 | http://localhost:9190 |
 
+Grafana comes with its dashboards provisioned from [`monitoring/grafana/dashboards`](monitoring/grafana/dashboards):
+**Outbox** - the events waiting in the table, the rate they reach Kafka, the pollers and the dead letter queue.
+
 Stop it with the same profile, or its containers are left running: `docker compose --profile observability down`,
 and `docker compose -f docker/compose.servlet.yml --profile observability down` for the servlet stack. `down -v`
 also drops the collected data.
