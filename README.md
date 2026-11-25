@@ -292,6 +292,23 @@ docker compose -f docker/compose.servlet.yml up -d --wait
 requests above work the same on these ports. The first start builds the service images from the sources, which
 takes a few minutes. `docker compose -f docker/compose.servlet.yml down` removes the stack.
 
+**Monitoring.** Both compose files take `--profile observability`, which adds the monitoring of
+[`monitoring/compose.yml`](monitoring/compose.yml): with the root file it watches the services started on the
+host, with the servlet stack the services in it, on host ports of its own so both can run at once.
+
+```bash
+docker compose --profile observability up -d
+docker compose -f docker/compose.servlet.yml --profile observability up -d --wait
+```
+
+| | Services on the host | Servlet stack |
+|---|---|---|
+| Prometheus | http://localhost:9090 | http://localhost:9190 |
+
+Stop it with the same profile, or its containers are left running: `docker compose --profile observability down`,
+and `docker compose -f docker/compose.servlet.yml --profile observability down` for the servlet stack. `down -v`
+also drops the collected data.
+
 ## 🔁 See the inbox at work
 
 Send the last `order-created` event to Kafka **once more, under its original id** - exactly what a lost

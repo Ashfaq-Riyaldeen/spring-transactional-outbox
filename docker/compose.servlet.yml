@@ -3,7 +3,12 @@
 # The services run from the images published to GHCR on release (APP_VERSION, latest by default); where an image
 # cannot be pulled, it is built from the sources of this repository.
 # Only the services are published on the host, so the stack runs next to the root docker-compose.yml.
+# --profile observability adds the monitoring of monitoring/compose.yml, on host ports of its own.
 name: outbox-servlet
+
+include:
+  - path: ../monitoring/compose.yml
+    env_file: ../monitoring/servlet.env
 
 services:
   orders-db:

@@ -1,7 +1,12 @@
 # Infrastructure for running the services from Maven or an IDE: a database per service and a single-node Kafka.
 # docker compose up -d starts it, docker compose down removes it together with its data.
-# Image versions and host ports come from .env next to this file.
+# Image versions and host ports come from .env next to this file, those of the monitoring from monitoring/host.env.
+# docker compose --profile observability up -d adds the monitoring of monitoring/compose.yml.
 name: spring-transactional-outbox
+
+include:
+  - path: monitoring/compose.yml
+    env_file: monitoring/host.env
 
 services:
   orders-db:

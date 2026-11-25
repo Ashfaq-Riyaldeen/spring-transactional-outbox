@@ -1,0 +1,29 @@
+# Monitoring of the services, included by docker-compose.yml and docker/compose.servlet.yml and started only with
+# --profile observability. Each including file passes an env file that tells this one where the services run and
+# which host ports to publish: monitoring/host.env for services started on the host, monitoring/servlet.env for
+# the servlet stack.
+
+services:
+  prometheus:
+    profiles: ["observability"]
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./prometheus/${PROMETHEUS_TARGETS}.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    # services started on the host (monitoring/host.env) are scraped through host.docker.internal, which Linux does
+    # not define by itself; unused in the servlet stack
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  prometheus-data:
