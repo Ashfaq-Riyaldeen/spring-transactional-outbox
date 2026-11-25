@@ -313,7 +313,9 @@ Grafana comes with its dashboards provisioned from [`monitoring/grafana/dashboar
 - **Inbox** - the events handled for the first time, the duplicates skipped, failed handling, the dead letter
   topic and the consumer lag;
 - **Orders and notifications** - orders placed and cancelled, requests turned away, the HTTP API, the connection
-  pools and the JVM of both services.
+  pools and the JVM of both services;
+- **PostgreSQL** - connections, transactions, cache and locks of both databases, and the size, dead rows and
+  vacuum state of their tables, the outbox and inbox tables among them.
 
 Stop it with the same profile, or its containers are left running: `docker compose --profile observability down`,
 and `docker compose -f docker/compose.servlet.yml --profile observability down` for the servlet stack. `down -v`
