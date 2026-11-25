@@ -304,6 +304,7 @@ docker compose -f docker/compose.servlet.yml --profile observability up -d --wai
 
 | | Services on the host | Servlet stack |
 |---|---|---|
+| Grafana (`admin` / `admin`) | http://localhost:3000 | http://localhost:3100 |
 | Prometheus | http://localhost:9090 | http://localhost:9190 |
 
 Stop it with the same profile, or its containers are left running: `docker compose --profile observability down`,
