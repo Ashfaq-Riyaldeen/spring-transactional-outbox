@@ -1,4 +1,5 @@
-# The services started on the host from Maven or an IDE, on their default ports.
+# The services started on the host from Maven or an IDE, on their default ports, and the database exporters of
+# this compose project.
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -13,3 +14,13 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ["host.docker.internal:8081"]
+
+  # the exporters run next to the databases, in the same compose project
+  - job_name: postgres
+    static_configs:
+      - targets: ["orders-db-exporter:9187"]
+        labels:
+          database: orders
+      - targets: ["notifications-db-exporter:9187"]
+        labels:
+          database: notifications

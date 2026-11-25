@@ -25,5 +25,22 @@ services:
       timeout: 5s
       retries: 10
 
+  # one exporter per database: orders-db and notifications-db are the same service names in both stacks
+  orders-db-exporter:
+    profiles: ["observability"]
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    environment:
+      DATA_SOURCE_URI: orders-db:5432/orders?sslmode=disable
+      DATA_SOURCE_USER: orders
+      DATA_SOURCE_PASS: orders
+
+  notifications-db-exporter:
+    profiles: ["observability"]
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    environment:
+      DATA_SOURCE_URI: notifications-db:5432/notifications?sslmode=disable
+      DATA_SOURCE_USER: notifications
+      DATA_SOURCE_PASS: notifications
+
 volumes:
   prometheus-data:

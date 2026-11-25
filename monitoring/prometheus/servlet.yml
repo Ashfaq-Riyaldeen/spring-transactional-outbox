@@ -1,4 +1,4 @@
-# The services of docker/compose.servlet.yml, reached by their container names.
+# The services and the database exporters of docker/compose.servlet.yml, reached by their service names.
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -13,3 +13,13 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ["notification-service:8081"]
+
+  # the exporters run next to the databases, in the same compose project
+  - job_name: postgres
+    static_configs:
+      - targets: ["orders-db-exporter:9187"]
+        labels:
+          database: orders
+      - targets: ["notifications-db-exporter:9187"]
+        labels:
+          database: notifications

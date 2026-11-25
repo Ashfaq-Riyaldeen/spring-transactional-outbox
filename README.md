@@ -294,7 +294,8 @@ takes a few minutes. `docker compose -f docker/compose.servlet.yml down` removes
 
 **Monitoring.** Both compose files take `--profile observability`, which adds the monitoring of
 [`monitoring/compose.yml`](monitoring/compose.yml): with the root file it watches the services started on the
-host, with the servlet stack the services in it, on host ports of its own so both can run at once.
+host and their databases, with the servlet stack the services and databases in it, on host ports of its own so
+both can run at once.
 
 ```bash
 docker compose --profile observability up -d
