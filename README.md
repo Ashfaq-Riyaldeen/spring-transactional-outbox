@@ -299,13 +299,24 @@ both can run at once.
 
 ```bash
 docker compose --profile observability up -d
-docker compose -f docker/compose.servlet.yml --profile observability up -d --wait
+TRACING_EXPORT_ENABLED=true docker compose -f docker/compose.servlet.yml --profile observability up -d --wait
+```
+
+Traces go to Grafana Tempo. In the servlet stack `TRACING_EXPORT_ENABLED=true` switches their export on; it is
+off by default, so a stack started without the profile does not keep failing to reach a Tempo that is not there.
+A service started on the host exports them once pointed at the Tempo of the root file, the notification service
+with `DB_PORT=5433` as before:
+
+```bash
+MANAGEMENT_OTLP_TRACING_ENDPOINT=http://localhost:4318/v1/traces \
+  mvn -pl order-service spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 | | Services on the host | Servlet stack |
 |---|---|---|
 | Grafana (`admin` / `admin`) | http://localhost:3000 | http://localhost:3100 |
 | Prometheus | http://localhost:9090 | http://localhost:9190 |
+| Tempo, OTLP over HTTP | http://localhost:4318 | http://localhost:4418 |
 
 Grafana comes with its dashboards provisioned from [`monitoring/grafana/dashboards`](monitoring/grafana/dashboards):
 
@@ -315,7 +326,9 @@ Grafana comes with its dashboards provisioned from [`monitoring/grafana/dashboar
 - **Orders and notifications** - orders placed and cancelled, requests turned away, the HTTP API, the connection
   pools and the JVM of both services;
 - **PostgreSQL** - connections, transactions, cache and locks of both databases, and the size, dead rows and
-  vacuum state of their tables, the outbox and inbox tables among them.
+  vacuum state of their tables, the outbox and inbox tables among them;
+- **Traces** - the latency of the order API with exemplars that open the trace of a request, and the recent and
+  failed traces of both services.
 
 Stop it with the same profile, or its containers are left running: `docker compose --profile observability down`,
 and `docker compose -f docker/compose.servlet.yml --profile observability down` for the servlet stack. `down -v`

@@ -85,6 +85,9 @@ services:
       # a load test from one machine runs into these, see tests/load-tests/README.md
       ORDER_RATE_LIMIT_GLOBAL_CAPACITY: ${ORDER_RATE_LIMIT_GLOBAL_CAPACITY:-100}
       ORDER_RATE_LIMIT_PER_IP_CAPACITY: ${ORDER_RATE_LIMIT_PER_IP_CAPACITY:-20}
+      # spans go to the Tempo of the observability profile once TRACING_EXPORT_ENABLED=true
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://tempo:4318/v1/traces
+      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: ${TRACING_EXPORT_ENABLED:-false}
     # started once its database accepts connections and the topics exist
     depends_on:
       orders-db:
@@ -112,6 +115,9 @@ services:
     environment:
       DB_HOST: notifications-db
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      # spans go to the Tempo of the observability profile once TRACING_EXPORT_ENABLED=true
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://tempo:4318/v1/traces
+      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED: ${TRACING_EXPORT_ENABLED:-false}
     depends_on:
       notifications-db:
         condition: service_healthy

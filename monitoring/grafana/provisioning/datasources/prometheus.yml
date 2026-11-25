@@ -12,3 +12,7 @@ datasources:
     jsonData:
       # matches the scrape interval, so a rate() over $__rate_interval always spans enough samples
       timeInterval: 15s
+      # an exemplar on a latency bucket carries the trace id of a request that fell into it
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo

@@ -10,6 +10,8 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=7d
+      # keeps the trace ids the services attach to their histogram buckets
+      - --enable-feature=exemplar-storage
     volumes:
       - ./prometheus/${PROMETHEUS_TARGETS}.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -43,10 +45,29 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
+      tempo:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
+      retries: 10
+
+  tempo:
+    profiles: ["observability"]
+    image: grafana/tempo:2.8.0
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    # OTLP over HTTP, for services started on the host; the containers of a stack send to tempo:4318
+    ports:
+      - "${TEMPO_OTLP_PORT}:4318"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3200/ready"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
       retries: 10
 
   # one exporter per database: orders-db and notifications-db are the same service names in both stacks
@@ -69,3 +90,4 @@ services:
 volumes:
   prometheus-data:
   grafana-data:
+  tempo-data:
