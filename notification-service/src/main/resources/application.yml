@@ -51,6 +51,8 @@ oncebox:
       order-created: io.github.outbox.contract.OrderCreatedEvent
       order-cancelled: io.github.outbox.contract.OrderCancelledEvent
     clean-up:
+      # oncebox schedules the inbox cleanup only when this is set explicitly; its default does not reach the condition
+      enabled: true
       # longer than any redelivery window, so a late duplicate still finds its id
       ttl: 7d
       polling:

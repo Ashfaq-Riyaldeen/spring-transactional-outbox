@@ -9,6 +9,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestConstructor;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -26,6 +27,7 @@ abstract class NotificationServiceEndToEndTestBase {
 
     static final String TOPIC = "order-events";
     static final String DEAD_LETTER_TOPIC = "order-events-dlt";
+    static final Duration INBOX_TTL = Duration.ofHours(1);
 
     protected final NotificationApi api;
     protected final OrderEventsPublisher orderService;
@@ -46,6 +48,11 @@ abstract class NotificationServiceEndToEndTestBase {
         registry.add("app.kafka.retry-interval", () -> "%dms".formatted(Waits.RETRY_INTERVAL.toMillis()));
         registry.add("app.kafka.transient-retry.initial-interval", () -> "200ms");
         registry.add("app.kafka.transient-retry.max-interval", () -> "1s");
+        // the cleanup runs every few seconds; the TTL keeps the ids of the other cases far from its reach
+        registry.add("oncebox.inbox.clean-up.ttl", () -> "%ds".formatted(INBOX_TTL.toSeconds()));
+        registry.add("oncebox.inbox.clean-up.polling.initial-delay", () -> "1s");
+        registry.add("oncebox.inbox.clean-up.polling.min-fixed-delay", () -> "500ms");
+        registry.add("oncebox.inbox.clean-up.polling.max-fixed-delay", () -> "2s");
     }
 
     @AfterEach
