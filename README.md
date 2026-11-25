@@ -318,6 +318,7 @@ MANAGEMENT_OTLP_TRACING_ENDPOINT=http://localhost:4318/v1/traces \
 | Prometheus | http://localhost:9090 | http://localhost:9190 |
 | Tempo, OTLP over HTTP | http://localhost:4318 | http://localhost:4418 |
 | OpenSearch, on this machine only | http://localhost:9200 | http://localhost:9210 |
+| OpenSearch Dashboards, on this machine only | http://localhost:5601 | http://localhost:5701 |
 
 With the `json-file` profile a service writes its JSON lines to a file as well, which Fluent Bit tails and ships
 to OpenSearch, one `service-logs-<date>` index a day, each deleted after a week. The servlet stack runs
@@ -328,6 +329,10 @@ and the `logs` directory of the repository:
 APP_LOGGING_JSON_FILE_DIR=$PWD/logs \
   mvn -pl order-service spring-boot:run -Dspring-boot.run.profiles=local,json-file
 ```
+
+OpenSearch Dashboards opens on the `service-logs-*` index pattern, with saved searches in Discover: **Orders
+created**, **Orders cancelled**, **Order across both services** (every line naming an order, narrowed with
+`orderId:<id>`) and **Order service errors**.
 
 Grafana comes with its dashboards provisioned from [`monitoring/grafana/dashboards`](monitoring/grafana/dashboards):
 
